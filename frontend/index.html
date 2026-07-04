@@ -1,0 +1,2586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="TrekVista — The premium trekking management platform for administrators, staff, and adventure seekers." />
+  <meta name="theme-color" content="#1a2a1a" />
+
+  <title>TrekVista — Trekking Management Platform V2</title>
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/frontend/manifest.json" />
+  <link rel="apple-touch-icon" href="/frontend/assets/icon-192.png" />
+
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <!-- Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet" />
+  <!-- Google Fonts: Inter -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:wght@700&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ================================================================
+       TREKKING PLATFORM V2 — GLOBAL DESIGN SYSTEM
+       ================================================================
+       All custom tokens and overrides live here. Bootstrap utilities
+       handle layout; this sheet handles the premium dark-forest theme,
+       glassmorphism cards, and micro-animations.
+    ================================================================ */
+
+    :root {
+      /* --- Color Palette: Deep Forest / Himalayan Dusk --- */
+      --trek-bg-darkest:   #0d1a0d;   /* deepest forest night */
+      --trek-bg-dark:      #132213;   /* sidebar & navbar bg */
+      --trek-bg-card:      #1c321c;   /* card background */
+      --trek-bg-glass:     rgba(28, 50, 28, 0.72);  /* glassmorphism panels */
+      --trek-surface:      #233b23;   /* input backgrounds */
+
+      --trek-primary:      #4caf50;   /* vibrant forest green */
+      --trek-primary-glow: rgba(76, 175, 80, 0.25);
+      --trek-secondary:    #81c784;   /* soft sage */
+      --trek-accent:       #ffd54f;   /* golden sunrise */
+      --trek-accent-warm:  #ff8f00;   /* ember orange */
+      --trek-danger:       #ef5350;
+      --trek-info:         #29b6f6;
+      --trek-muted:        #5a7a5a;
+
+      --trek-text-primary: #e8f5e9;
+      --trek-text-secondary: #a5c8a5;
+      --trek-text-muted:   #6a8f6a;
+
+      /* --- Gradients --- */
+      --trek-gradient-hero: linear-gradient(135deg, #0d1a0d 0%, #1b3a1b 50%, #0d2a1d 100%);
+      --trek-gradient-card: linear-gradient(145deg, #1c321c 0%, #162816 100%);
+      --trek-gradient-accent: linear-gradient(90deg, #4caf50, #81c784);
+      --trek-gradient-gold: linear-gradient(90deg, #ffd54f, #ff8f00);
+
+      /* --- Shadows & Glow --- */
+      --trek-shadow-sm:    0 2px 12px rgba(0,0,0,0.4);
+      --trek-shadow-md:    0 4px 24px rgba(0,0,0,0.5);
+      --trek-shadow-lg:    0 8px 48px rgba(0,0,0,0.6);
+      --trek-glow-green:   0 0 20px rgba(76, 175, 80, 0.3);
+
+      /* --- Border Radius --- */
+      --trek-radius-sm:    8px;
+      --trek-radius-md:    16px;
+      --trek-radius-lg:    24px;
+      --trek-radius-xl:    32px;
+
+      /* --- Typography --- */
+      --trek-font-body:    'Inter', sans-serif;
+      --trek-font-display: 'Playfair Display', serif;
+
+      /* --- Transitions --- */
+      --trek-transition:   all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* ============================================================
+       BASE RESET & BODY
+    ============================================================ */
+    *, *::before, *::after { box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--trek-font-body);
+      background-color: var(--trek-bg-darkest);
+      color: var(--trek-text-primary);
+      min-height: 100vh;
+      overflow-x: hidden;
+      background-image:
+        radial-gradient(ellipse at 10% 20%, rgba(76, 175, 80, 0.04) 0%, transparent 60%),
+        radial-gradient(ellipse at 90% 80%, rgba(255, 213, 79, 0.03) 0%, transparent 60%);
+    }
+
+    /* ============================================================
+       SCROLLBAR STYLING
+    ============================================================ */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--trek-bg-darkest); }
+    ::-webkit-scrollbar-thumb { background: var(--trek-muted); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--trek-primary); }
+
+    /* ============================================================
+       NAVIGATION BAR
+    ============================================================ */
+    #trek-navbar {
+      background: rgba(13, 26, 13, 0.92) !important;
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(76, 175, 80, 0.15);
+      box-shadow: 0 2px 20px rgba(0,0,0,0.5);
+      transition: var(--trek-transition);
+      z-index: 1030;
+    }
+
+    .navbar-brand-logo {
+      font-family: var(--trek-font-display);
+      font-size: 1.5rem;
+      font-weight: 700;
+      background: var(--trek-gradient-accent);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: -0.5px;
+    }
+
+    .navbar-brand-logo .brand-icon {
+      font-size: 1.4rem;
+      color: var(--trek-primary);
+      -webkit-text-fill-color: var(--trek-primary);
+      margin-right: 6px;
+    }
+
+    .nav-link {
+      color: var(--trek-text-secondary) !important;
+      font-weight: 500;
+      font-size: 0.9rem;
+      padding: 0.5rem 1rem !important;
+      border-radius: var(--trek-radius-sm);
+      transition: var(--trek-transition);
+    }
+    .nav-link:hover, .nav-link.active {
+      color: var(--trek-primary) !important;
+      background: var(--trek-primary-glow);
+    }
+
+    /* ============================================================
+       SIDEBAR (Dashboard Navigation)
+    ============================================================ */
+    #trek-sidebar {
+      width: 260px;
+      min-height: calc(100vh - 64px);
+      background: var(--trek-bg-dark);
+      border-right: 1px solid rgba(76, 175, 80, 0.12);
+      position: fixed;
+      top: 64px;
+      left: 0;
+      overflow-y: auto;
+      transition: transform 0.3s ease;
+      z-index: 1020;
+    }
+
+    .sidebar-section-label {
+      color: var(--trek-text-muted);
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      padding: 1.2rem 1.2rem 0.4rem;
+    }
+
+    .sidebar-link {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0.65rem 1.2rem;
+      color: var(--trek-text-secondary);
+      font-size: 0.88rem;
+      font-weight: 500;
+      text-decoration: none;
+      border-radius: 0;
+      transition: var(--trek-transition);
+      border-left: 3px solid transparent;
+      cursor: pointer;
+    }
+    .sidebar-link:hover {
+      background: rgba(76, 175, 80, 0.08);
+      color: var(--trek-primary);
+      border-left-color: var(--trek-primary);
+    }
+    .sidebar-link.active {
+      background: rgba(76, 175, 80, 0.14);
+      color: var(--trek-primary);
+      border-left-color: var(--trek-primary);
+      font-weight: 600;
+    }
+    .sidebar-link i { font-size: 1rem; width: 20px; text-align: center; }
+
+    /* Sidebar overlay for mobile */
+    #sidebar-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 1015;
+    }
+    @media (max-width: 991.98px) {
+      #trek-sidebar { transform: translateX(-100%); }
+      #trek-sidebar.sidebar-open { transform: translateX(0); }
+      #sidebar-overlay.visible { display: block; }
+    }
+
+    /* ============================================================
+       MAIN CONTENT AREA
+    ============================================================ */
+    #trek-main-content {
+      margin-left: 260px;
+      padding: 2rem;
+      min-height: calc(100vh - 64px);
+      transition: margin-left 0.3s ease;
+    }
+    @media (max-width: 991.98px) {
+      #trek-main-content { margin-left: 0; padding: 1rem; }
+    }
+
+    /* ============================================================
+       AUTH PAGES (Login / Register)
+    ============================================================ */
+    #auth-container {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--trek-gradient-hero);
+      position: relative;
+      overflow: hidden;
+    }
+    #auth-container::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image:
+        url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%234caf50' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+      pointer-events: none;
+    }
+
+    .auth-card {
+      background: var(--trek-bg-glass);
+      backdrop-filter: blur(24px);
+      border: 1px solid rgba(76, 175, 80, 0.2);
+      border-radius: var(--trek-radius-xl);
+      padding: 2.5rem;
+      width: 100%;
+      max-width: 440px;
+      box-shadow: var(--trek-shadow-lg), var(--trek-glow-green);
+      animation: fadeSlideUp 0.5s ease forwards;
+    }
+
+    .auth-mountain-header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    .auth-mountain-icon {
+      font-size: 3rem;
+      color: var(--trek-primary);
+      filter: drop-shadow(0 0 12px var(--trek-primary));
+      margin-bottom: 0.5rem;
+    }
+    .auth-title {
+      font-family: var(--trek-font-display);
+      font-size: 1.8rem;
+      color: var(--trek-text-primary);
+      margin: 0;
+    }
+    .auth-subtitle {
+      color: var(--trek-text-muted);
+      font-size: 0.88rem;
+    }
+
+    /* ============================================================
+       METRIC CARDS (Dashboard)
+    ============================================================ */
+    .metric-card {
+      background: var(--trek-gradient-card);
+      border: 1px solid rgba(76, 175, 80, 0.12);
+      border-radius: var(--trek-radius-md);
+      padding: 1.5rem;
+      transition: var(--trek-transition);
+      position: relative;
+      overflow: hidden;
+    }
+    .metric-card::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: var(--trek-gradient-accent);
+      opacity: 0;
+      transition: var(--trek-transition);
+    }
+    .metric-card:hover {
+      border-color: rgba(76, 175, 80, 0.3);
+      box-shadow: var(--trek-shadow-md), var(--trek-glow-green);
+      transform: translateY(-3px);
+    }
+    .metric-card:hover::after { opacity: 1; }
+
+    .metric-card-icon {
+      width: 52px;
+      height: 52px;
+      border-radius: var(--trek-radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+      margin-bottom: 1rem;
+    }
+    .metric-icon-green { background: rgba(76, 175, 80, 0.15); color: var(--trek-primary); }
+    .metric-icon-gold  { background: rgba(255, 213, 79, 0.15); color: var(--trek-accent); }
+    .metric-icon-blue  { background: rgba(41, 182, 246, 0.15); color: var(--trek-info); }
+    .metric-icon-red   { background: rgba(239, 83, 80, 0.15);  color: var(--trek-danger); }
+
+    .metric-value {
+      font-size: 2.2rem;
+      font-weight: 800;
+      color: var(--trek-text-primary);
+      line-height: 1;
+      margin-bottom: 0.25rem;
+    }
+    .metric-label {
+      font-size: 0.82rem;
+      color: var(--trek-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      font-weight: 600;
+    }
+
+    /* ============================================================
+       TREK EXPEDITION CARDS
+    ============================================================ */
+    .trek-card {
+      background: var(--trek-gradient-card);
+      border: 1px solid rgba(76, 175, 80, 0.1);
+      border-radius: var(--trek-radius-md);
+      overflow: hidden;
+      transition: var(--trek-transition);
+      height: 100%;
+      cursor: pointer;
+    }
+    .trek-card:hover {
+      border-color: rgba(76, 175, 80, 0.35);
+      transform: translateY(-5px);
+      box-shadow: var(--trek-shadow-lg), var(--trek-glow-green);
+    }
+    .trek-card-image {
+      height: 180px;
+      background: var(--trek-gradient-hero);
+      position: relative;
+      overflow: hidden;
+    }
+    .trek-card-image img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.4s ease;
+    }
+    .trek-card:hover .trek-card-image img { transform: scale(1.06); }
+
+    .trek-card-image-placeholder {
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 3rem;
+      color: var(--trek-muted);
+      background: linear-gradient(135deg, #1c321c, #0d2a1d);
+    }
+    .trek-card-difficulty-badge {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 0.25rem 0.6rem;
+      border-radius: 20px;
+      letter-spacing: 0.5px;
+    }
+    .trek-card-status-badge {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+    }
+    .trek-card-body { padding: 1.25rem; }
+    .trek-card-name {
+      font-weight: 700;
+      font-size: 1rem;
+      color: var(--trek-text-primary);
+      margin-bottom: 0.35rem;
+      line-height: 1.3;
+    }
+    .trek-card-location {
+      color: var(--trek-text-muted);
+      font-size: 0.82rem;
+      margin-bottom: 0.75rem;
+    }
+    .trek-card-location i { color: var(--trek-primary); margin-right: 4px; }
+
+    .trek-meta-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    .trek-meta-item {
+      background: rgba(76, 175, 80, 0.06);
+      border-radius: var(--trek-radius-sm);
+      padding: 0.5rem;
+      font-size: 0.78rem;
+      text-align: center;
+    }
+    .trek-meta-item .meta-val { font-weight: 700; color: var(--trek-text-primary); display: block; }
+    .trek-meta-item .meta-key { color: var(--trek-text-muted); font-size: 0.7rem; }
+
+    .trek-slot-bar {
+      background: rgba(255,255,255,0.08);
+      border-radius: 4px;
+      height: 6px;
+      margin-bottom: 0.25rem;
+      overflow: hidden;
+    }
+    .trek-slot-fill {
+      height: 100%;
+      border-radius: 4px;
+      background: var(--trek-gradient-accent);
+      transition: width 0.5s ease;
+    }
+
+    /* ============================================================
+       FORM CONTROLS — Custom dark theme override
+    ============================================================ */
+    .form-control, .form-select {
+      background-color: var(--trek-surface) !important;
+      border: 1px solid rgba(76, 175, 80, 0.2) !important;
+      color: var(--trek-text-primary) !important;
+      border-radius: var(--trek-radius-sm) !important;
+      font-size: 0.9rem;
+      transition: var(--trek-transition);
+    }
+    .form-control::placeholder { color: var(--trek-text-muted) !important; }
+    .form-control:focus, .form-select:focus {
+      border-color: var(--trek-primary) !important;
+      box-shadow: 0 0 0 3px var(--trek-primary-glow) !important;
+      background-color: var(--trek-bg-card) !important;
+    }
+    .form-label {
+      color: var(--trek-text-secondary);
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 0.4rem;
+    }
+    .invalid-feedback { font-size: 0.78rem; }
+    .form-control.is-invalid {
+      border-color: var(--trek-danger) !important;
+      box-shadow: 0 0 0 3px rgba(239, 83, 80, 0.2) !important;
+    }
+    .form-control.is-valid {
+      border-color: var(--trek-primary) !important;
+    }
+
+    /* ============================================================
+       BUTTONS — Premium design
+    ============================================================ */
+    .btn-trek-primary {
+      background: var(--trek-gradient-accent);
+      border: none;
+      color: #fff;
+      font-weight: 700;
+      font-size: 0.9rem;
+      border-radius: var(--trek-radius-sm);
+      padding: 0.6rem 1.4rem;
+      transition: var(--trek-transition);
+      letter-spacing: 0.3px;
+      position: relative;
+      overflow: hidden;
+    }
+    .btn-trek-primary::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: rgba(255,255,255,0.1);
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .btn-trek-primary:hover::before { opacity: 1; }
+    .btn-trek-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
+    }
+    .btn-trek-primary:active { transform: translateY(0); }
+
+    .btn-trek-outline {
+      background: transparent;
+      border: 1.5px solid var(--trek-primary);
+      color: var(--trek-primary);
+      font-weight: 600;
+      font-size: 0.9rem;
+      border-radius: var(--trek-radius-sm);
+      padding: 0.55rem 1.3rem;
+      transition: var(--trek-transition);
+    }
+    .btn-trek-outline:hover {
+      background: var(--trek-primary-glow);
+      color: var(--trek-primary);
+    }
+
+    .btn-trek-danger {
+      background: linear-gradient(90deg, #ef5350, #c62828);
+      border: none;
+      color: #fff;
+      font-weight: 700;
+      border-radius: var(--trek-radius-sm);
+      padding: 0.55rem 1.2rem;
+      transition: var(--trek-transition);
+    }
+    .btn-trek-danger:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(239, 83, 80, 0.35);
+      color: #fff;
+    }
+
+    /* ============================================================
+       TABLES — Premium dark styling
+    ============================================================ */
+    .trek-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      font-size: 0.875rem;
+    }
+    .trek-table thead th {
+      background: var(--trek-bg-card);
+      color: var(--trek-text-muted);
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-weight: 700;
+      padding: 0.9rem 1rem;
+      border-bottom: 1px solid rgba(76, 175, 80, 0.15);
+      white-space: nowrap;
+    }
+    .trek-table tbody tr {
+      transition: var(--trek-transition);
+    }
+    .trek-table tbody tr:hover { background: rgba(76, 175, 80, 0.05); }
+    .trek-table tbody td {
+      padding: 0.9rem 1rem;
+      border-bottom: 1px solid rgba(76, 175, 80, 0.06);
+      color: var(--trek-text-secondary);
+      vertical-align: middle;
+    }
+
+    /* ============================================================
+       BADGES — Custom difficulty and status
+    ============================================================ */
+    .badge-easy     { background: rgba(76, 175, 80, 0.2);  color: #81c784; }
+    .badge-moderate { background: rgba(255, 152, 0, 0.2);  color: #ffb74d; }
+    .badge-hard     { background: rgba(239, 83, 80, 0.2);  color: #ef9a9a; }
+    .badge-open     { background: rgba(76, 175, 80, 0.2);  color: #81c784; }
+    .badge-closed   { background: rgba(239, 83, 80, 0.15); color: #ef9a9a; }
+    .badge-pending  { background: rgba(255, 213, 79, 0.15);color: #ffd54f; }
+    .badge-approved { background: rgba(41, 182, 246, 0.15);color: #29b6f6; }
+    .badge-completed{ background: rgba(129, 199, 132, 0.15);color: #81c784; }
+    .badge-booked   { background: rgba(76, 175, 80, 0.2);  color: #a5d6a7; }
+    .badge-cancelled{ background: rgba(239, 83, 80, 0.15); color: #ef9a9a; }
+
+    .trek-badge {
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 0.25rem 0.65rem;
+      border-radius: 20px;
+      letter-spacing: 0.4px;
+      display: inline-block;
+    }
+
+    /* ============================================================
+       MODALS — Custom dark theme
+    ============================================================ */
+    .modal-content {
+      background: var(--trek-bg-card) !important;
+      border: 1px solid rgba(76, 175, 80, 0.2) !important;
+      border-radius: var(--trek-radius-lg) !important;
+      color: var(--trek-text-primary);
+    }
+    .modal-header {
+      border-bottom: 1px solid rgba(76, 175, 80, 0.15) !important;
+      padding: 1.25rem 1.5rem;
+    }
+    .modal-footer {
+      border-top: 1px solid rgba(76, 175, 80, 0.15) !important;
+    }
+    .modal-title { font-weight: 700; color: var(--trek-text-primary); }
+    .btn-close { filter: invert(1) brightness(0.7); }
+
+    /* ============================================================
+       TOAST NOTIFICATIONS
+    ============================================================ */
+    #trek-toast-container {
+      position: fixed;
+      top: 80px;
+      right: 20px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      pointer-events: none;
+    }
+    .trek-toast {
+      background: var(--trek-bg-card);
+      border: 1px solid rgba(76, 175, 80, 0.25);
+      border-radius: var(--trek-radius-md);
+      padding: 1rem 1.25rem;
+      min-width: 300px;
+      max-width: 380px;
+      box-shadow: var(--trek-shadow-lg);
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      pointer-events: all;
+      animation: slideInRight 0.3s ease forwards;
+      backdrop-filter: blur(16px);
+    }
+    .trek-toast.toast-success { border-left: 4px solid var(--trek-primary); }
+    .trek-toast.toast-error   { border-left: 4px solid var(--trek-danger); }
+    .trek-toast.toast-warning { border-left: 4px solid var(--trek-accent); }
+    .trek-toast.toast-info    { border-left: 4px solid var(--trek-info); }
+    .trek-toast.toast-exit { animation: slideOutRight 0.3s ease forwards; }
+
+    .toast-icon { font-size: 1.2rem; margin-top: 1px; flex-shrink: 0; }
+    .toast-body { flex: 1; }
+    .toast-title { font-weight: 700; font-size: 0.88rem; margin-bottom: 2px; }
+    .toast-message { font-size: 0.82rem; color: var(--trek-text-muted); }
+    .toast-close {
+      background: none;
+      border: none;
+      color: var(--trek-text-muted);
+      cursor: pointer;
+      padding: 0;
+      font-size: 0.9rem;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+
+    /* ============================================================
+       CHART.JS CONTAINER
+    ============================================================ */
+    .chart-card {
+      background: var(--trek-gradient-card);
+      border: 1px solid rgba(76, 175, 80, 0.12);
+      border-radius: var(--trek-radius-md);
+      padding: 1.5rem;
+    }
+    .chart-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--trek-text-primary);
+      margin-bottom: 1rem;
+    }
+    .chart-title i { color: var(--trek-primary); margin-right: 6px; }
+
+    /* ============================================================
+       SECTION HEADERS
+    ============================================================ */
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    .section-title {
+      font-size: 1.3rem;
+      font-weight: 800;
+      color: var(--trek-text-primary);
+      margin: 0;
+    }
+    .section-title span { color: var(--trek-primary); }
+
+    /* ============================================================
+       FILTER BAR
+    ============================================================ */
+    .filter-bar {
+      background: var(--trek-gradient-card);
+      border: 1px solid rgba(76, 175, 80, 0.1);
+      border-radius: var(--trek-radius-md);
+      padding: 1.25rem;
+      margin-bottom: 1.5rem;
+    }
+
+    /* ============================================================
+       PAYMENT SIMULATION MODAL
+    ============================================================ */
+    .payment-card-preview {
+      background: linear-gradient(135deg, #1b3a2b, #0d2a1d);
+      border: 1px solid rgba(76, 175, 80, 0.25);
+      border-radius: 16px;
+      padding: 1.5rem;
+      font-family: 'Courier New', monospace;
+      position: relative;
+      overflow: hidden;
+    }
+    .payment-card-preview::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -20%;
+      width: 200px;
+      height: 200px;
+      border-radius: 50%;
+      background: rgba(76, 175, 80, 0.06);
+    }
+    .payment-card-number { font-size: 1.1rem; letter-spacing: 3px; color: #c8e6c9; }
+    .payment-card-chip { font-size: 1.8rem; color: var(--trek-accent); }
+    .payment-progress-ring { width: 80px; height: 80px; }
+
+    /* ============================================================
+       HERO SECTION (Landing / Trekker Home)
+    ============================================================ */
+    .dashboard-hero {
+      background: var(--trek-gradient-hero);
+      border: 1px solid rgba(76, 175, 80, 0.15);
+      border-radius: var(--trek-radius-lg);
+      padding: 2.5rem;
+      margin-bottom: 2rem;
+      position: relative;
+      overflow: hidden;
+    }
+    .dashboard-hero::after {
+      content: '⛰';
+      position: absolute;
+      right: 2rem;
+      bottom: -0.5rem;
+      font-size: 6rem;
+      opacity: 0.08;
+      pointer-events: none;
+    }
+    .dashboard-hero h1 {
+      font-family: var(--trek-font-display);
+      font-size: 2rem;
+      color: var(--trek-text-primary);
+      margin: 0;
+    }
+    .dashboard-hero .hero-sub {
+      color: var(--trek-text-muted);
+      font-size: 0.95rem;
+      margin-top: 0.5rem;
+    }
+    .dashboard-hero .hero-badge {
+      display: inline-block;
+      background: var(--trek-primary-glow);
+      color: var(--trek-primary);
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 0.2rem 0.75rem;
+      border-radius: 20px;
+      border: 1px solid rgba(76,175,80,0.3);
+      margin-bottom: 0.75rem;
+      letter-spacing: 0.5px;
+    }
+
+    /* ============================================================
+       LOADING SPINNER
+    ============================================================ */
+    .trek-spinner-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(13, 26, 13, 0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9998;
+      backdrop-filter: blur(4px);
+    }
+    .trek-spinner {
+      width: 48px;
+      height: 48px;
+      border: 4px solid rgba(76, 175, 80, 0.15);
+      border-top-color: var(--trek-primary);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    /* ============================================================
+       ANIMATIONS
+    ============================================================ */
+    @keyframes fadeSlideUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes slideInRight {
+      from { opacity: 0; transform: translateX(30px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+    @keyframes slideOutRight {
+      from { opacity: 1; transform: translateX(0); }
+      to   { opacity: 0; transform: translateX(30px); }
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    @keyframes countUp {
+      from { opacity: 0; transform: scale(0.8); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+    .animate-in { animation: fadeSlideUp 0.4s ease forwards; }
+    .count-up-animate { animation: countUp 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+
+    /* ============================================================
+       MISC UTILITIES
+    ============================================================ */
+    .glass-panel {
+      background: var(--trek-bg-glass);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(76, 175, 80, 0.15);
+      border-radius: var(--trek-radius-md);
+    }
+    .text-trek-primary { color: var(--trek-primary) !important; }
+    .text-trek-muted   { color: var(--trek-text-muted) !important; }
+    .text-trek-accent  { color: var(--trek-accent) !important; }
+    .divider-glow {
+      border: none;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(76,175,80,0.3), transparent);
+      margin: 1.5rem 0;
+    }
+    .empty-state {
+      text-align: center;
+      padding: 4rem 2rem;
+      color: var(--trek-text-muted);
+    }
+    .empty-state-icon { font-size: 3.5rem; margin-bottom: 1rem; opacity: 0.4; }
+    .empty-state p { font-size: 0.95rem; }
+
+    /* ============================================================
+       RESPONSIVE TWEAKS
+    ============================================================ */
+    @media (max-width: 575.98px) {
+      .auth-card { padding: 1.75rem; margin: 1rem; }
+      .dashboard-hero { padding: 1.5rem; }
+      .dashboard-hero h1 { font-size: 1.5rem; }
+      .metric-value { font-size: 1.8rem; }
+      #trek-main-content { padding: 0.75rem; }
+    }
+
+    /* ============================================================
+       PRINT STYLES (for PDF reports)
+    ============================================================ */
+    @media print {
+      #trek-navbar, #trek-sidebar, #trek-toast-container { display: none !important; }
+      #trek-main-content { margin-left: 0 !important; }
+      .trek-card { break-inside: avoid; }
+    }
+
+    /* ============================================================
+       PROFILE AVATAR
+    ============================================================ */
+    .avatar-circle {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: var(--trek-gradient-accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 1rem;
+      color: #fff;
+      flex-shrink: 0;
+      text-transform: uppercase;
+    }
+    .avatar-circle-lg {
+      width: 80px;
+      height: 80px;
+      font-size: 1.8rem;
+      border-radius: 50%;
+      background: var(--trek-gradient-accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      color: #fff;
+    }
+
+    /* ============================================================
+       PASSWORD STRENGTH INDICATOR
+    ============================================================ */
+    .password-strength-bar {
+      height: 4px;
+      border-radius: 2px;
+      background: rgba(255,255,255,0.08);
+      overflow: hidden;
+      margin-top: 6px;
+    }
+    .password-strength-fill {
+      height: 100%;
+      border-radius: 2px;
+      transition: width 0.3s ease, background 0.3s ease;
+    }
+    .strength-weak   { width: 33%; background: var(--trek-danger); }
+    .strength-medium { width: 66%; background: var(--trek-accent); }
+    .strength-strong { width: 100%; background: var(--trek-primary); }
+    .password-strength-label {
+      font-size: 0.73rem;
+      font-weight: 600;
+      margin-top: 3px;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ================================================================
+     TOAST NOTIFICATION CONTAINER
+     Toasts are injected here by the Vue global toast system.
+================================================================ -->
+<div id="trek-toast-container"></div>
+
+<!-- ================================================================
+     VUE 3 APPLICATION MOUNT POINT
+     The entire SPA renders inside #trek-app.
+================================================================ -->
+<div id="trek-app">
+
+  <!-- Global loading overlay — shown during API calls -->
+  <div class="trek-spinner-overlay" v-if="globalLoadingState">
+    <div>
+      <div class="trek-spinner mx-auto mb-3"></div>
+      <p class="text-center text-trek-muted" style="font-size:0.85rem;">
+        {{ globalLoadingMessage || 'Loading...' }}
+      </p>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       AUTH VIEWS: Login & Register
+  ============================================================ -->
+  <div v-if="!authenticatedUserSession" id="auth-container">
+
+    <!-- LOGIN FORM -->
+    <div v-if="activeAuthView === 'login'" class="auth-card animate-in">
+      <div class="auth-mountain-header">
+        <div class="auth-mountain-icon">⛰️</div>
+        <h1 class="auth-title">TrekVista</h1>
+        <p class="auth-subtitle">Sign in to your account</p>
+      </div>
+
+      <form id="login-form" @submit.prevent="handleUserLoginSubmission" novalidate>
+        <div class="mb-3">
+          <label for="login-email" class="form-label">Email Address</label>
+          <div class="input-group">
+            <span class="input-group-text" style="background:var(--trek-surface);border-color:rgba(76,175,80,0.2);color:var(--trek-muted);">
+              <i class="bi bi-envelope"></i>
+            </span>
+            <input
+              id="login-email"
+              type="email"
+              class="form-control"
+              :class="{ 'is-invalid': loginFormErrors.email }"
+              v-model="loginFormData.user_email_address"
+              placeholder="your@email.com"
+              autocomplete="email"
+              required
+            />
+            <div class="invalid-feedback">{{ loginFormErrors.email }}</div>
+          </div>
+        </div>
+
+        <div class="mb-4">
+          <label for="login-password" class="form-label">Password</label>
+          <div class="input-group">
+            <span class="input-group-text" style="background:var(--trek-surface);border-color:rgba(76,175,80,0.2);color:var(--trek-muted);">
+              <i class="bi bi-lock"></i>
+            </span>
+            <input
+              id="login-password"
+              :type="loginPasswordVisible ? 'text' : 'password'"
+              class="form-control"
+              :class="{ 'is-invalid': loginFormErrors.password }"
+              v-model="loginFormData.submitted_password"
+              placeholder="Enter password"
+              autocomplete="current-password"
+              required
+            />
+            <button
+              type="button"
+              class="input-group-text"
+              style="background:var(--trek-surface);border-color:rgba(76,175,80,0.2);color:var(--trek-muted);cursor:pointer;"
+              @click="loginPasswordVisible = !loginPasswordVisible"
+              tabindex="-1"
+            >
+              <i :class="loginPasswordVisible ? 'bi bi-eye-slash' : 'bi bi-eye'"></i>
+            </button>
+            <div class="invalid-feedback">{{ loginFormErrors.password }}</div>
+          </div>
+        </div>
+
+        <div v-if="loginApiError" class="alert alert-danger py-2 mb-3" style="background:rgba(239,83,80,0.1);border-color:rgba(239,83,80,0.3);color:#ef9a9a;border-radius:8px;font-size:0.85rem;">
+          <i class="bi bi-exclamation-triangle me-2"></i>{{ loginApiError }}
+        </div>
+
+        <button
+          type="submit"
+          class="btn btn-trek-primary w-100 py-2"
+          :disabled="loginSubmitting"
+        >
+          <span v-if="loginSubmitting">
+            <span class="spinner-border spinner-border-sm me-2"></span>Signing in...
+          </span>
+          <span v-else>
+            <i class="bi bi-box-arrow-in-right me-2"></i>Sign In
+          </span>
+        </button>
+      </form>
+
+      <hr class="divider-glow" />
+
+      <p class="text-center mb-0" style="font-size:0.88rem;color:var(--trek-text-muted);">
+        New trekker?
+        <a href="#" @click.prevent="activeAuthView = 'register'" class="text-trek-primary fw-600">
+          Create your account
+        </a>
+      </p>
+    </div>
+
+    <!-- REGISTER FORM -->
+    <div v-if="activeAuthView === 'register'" class="auth-card animate-in" style="max-width:480px;">
+      <div class="auth-mountain-header">
+        <div class="auth-mountain-icon">🏕️</div>
+        <h1 class="auth-title">Join TrekVista</h1>
+        <p class="auth-subtitle">Create your trekker account</p>
+      </div>
+
+      <form id="register-form" @submit.prevent="handleTrekkerRegistrationSubmission" novalidate>
+        <div class="mb-3">
+          <label for="reg-name" class="form-label">Full Name</label>
+          <input
+            id="reg-name"
+            type="text"
+            class="form-control"
+            :class="{ 'is-invalid': registrationFormErrors.user_full_name }"
+            v-model="registrationFormData.user_full_name"
+            placeholder="Your full name"
+            autocomplete="name"
+          />
+          <div class="invalid-feedback">{{ registrationFormErrors.user_full_name }}</div>
+        </div>
+
+        <div class="mb-3">
+          <label for="reg-email" class="form-label">Email Address</label>
+          <input
+            id="reg-email"
+            type="email"
+            class="form-control"
+            :class="{ 'is-invalid': registrationFormErrors.user_email_address, 'is-valid': registrationEmailChecked && !registrationFormErrors.user_email_address }"
+            v-model="registrationFormData.user_email_address"
+            placeholder="your@email.com"
+            autocomplete="email"
+          />
+          <div class="invalid-feedback">{{ registrationFormErrors.user_email_address }}</div>
+        </div>
+
+        <div class="mb-3">
+          <label for="reg-phone" class="form-label">Phone Number <span style="color:var(--trek-text-muted);font-weight:400;">(optional)</span></label>
+          <input
+            id="reg-phone"
+            type="tel"
+            class="form-control"
+            :class="{ 'is-invalid': registrationFormErrors.user_contact_phone_number }"
+            v-model="registrationFormData.user_contact_phone_number"
+            placeholder="+91 98765 43210"
+          />
+          <div class="invalid-feedback">{{ registrationFormErrors.user_contact_phone_number }}</div>
+        </div>
+
+        <div class="mb-4">
+          <label for="reg-password" class="form-label">Password</label>
+          <div class="input-group">
+            <input
+              id="reg-password"
+              :type="registerPasswordVisible ? 'text' : 'password'"
+              class="form-control"
+              :class="{ 'is-invalid': registrationFormErrors.raw_password }"
+              v-model="registrationFormData.raw_password"
+              placeholder="Min 8 chars, uppercase, digit, special"
+              autocomplete="new-password"
+            />
+            <button type="button" class="input-group-text"
+              style="background:var(--trek-surface);border-color:rgba(76,175,80,0.2);color:var(--trek-muted);cursor:pointer;"
+              @click="registerPasswordVisible = !registerPasswordVisible" tabindex="-1">
+              <i :class="registerPasswordVisible ? 'bi bi-eye-slash' : 'bi bi-eye'"></i>
+            </button>
+          </div>
+          <!-- Password Strength Indicator -->
+          <div v-if="registrationFormData.raw_password" class="mt-2">
+            <div class="password-strength-bar">
+              <div class="password-strength-fill" :class="passwordStrengthClass"></div>
+            </div>
+            <div class="password-strength-label" :style="{ color: passwordStrengthColor }">
+              {{ passwordStrengthLabel }}
+            </div>
+          </div>
+          <div class="invalid-feedback d-block" v-if="registrationFormErrors.raw_password">
+            {{ registrationFormErrors.raw_password }}
+          </div>
+        </div>
+
+        <div v-if="registrationApiError" class="alert alert-danger py-2 mb-3" style="background:rgba(239,83,80,0.1);border-color:rgba(239,83,80,0.3);color:#ef9a9a;border-radius:8px;font-size:0.85rem;">
+          <i class="bi bi-exclamation-triangle me-2"></i>{{ registrationApiError }}
+        </div>
+
+        <button type="submit" class="btn btn-trek-primary w-100 py-2" :disabled="registrationSubmitting">
+          <span v-if="registrationSubmitting">
+            <span class="spinner-border spinner-border-sm me-2"></span>Creating account...
+          </span>
+          <span v-else>
+            <i class="bi bi-person-plus me-2"></i>Create Account
+          </span>
+        </button>
+      </form>
+
+      <hr class="divider-glow" />
+      <p class="text-center mb-0" style="font-size:0.88rem;color:var(--trek-text-muted);">
+        Already have an account?
+        <a href="#" @click.prevent="activeAuthView = 'login'" class="text-trek-primary fw-600">Sign in</a>
+      </p>
+    </div>
+
+  </div> <!-- /auth-container -->
+
+  <!-- ============================================================
+       AUTHENTICATED DASHBOARD LAYOUT
+  ============================================================ -->
+  <div v-else>
+
+    <!-- ========================================================
+         TOP NAVIGATION BAR
+    ======================================================== -->
+    <nav class="navbar navbar-expand-lg fixed-top" id="trek-navbar">
+      <div class="container-fluid px-3">
+
+        <!-- Mobile sidebar toggle -->
+        <button class="btn btn-sm d-lg-none me-2" @click="toggleSidebar"
+          style="color:var(--trek-primary);background:var(--trek-primary-glow);border:none;border-radius:8px;padding:6px 10px;">
+          <i class="bi bi-list fs-5"></i>
+        </button>
+
+        <!-- Brand -->
+        <a class="navbar-brand navbar-brand-logo" href="#">
+          <span class="brand-icon">⛰</span>TrekVista
+        </a>
+
+        <!-- Right side controls -->
+        <div class="d-flex align-items-center gap-2 ms-auto">
+
+          <!-- Role badge -->
+          <span class="trek-badge"
+            :class="{
+              'badge-open': authenticatedUserSession.assigned_platform_role === 'Admin',
+              'badge-approved': authenticatedUserSession.assigned_platform_role === 'Staff',
+              'badge-booked': authenticatedUserSession.assigned_platform_role === 'Trekker'
+            }">
+            <i class="bi bi-shield-check me-1"></i>
+            {{ authenticatedUserSession.assigned_platform_role }}
+          </span>
+
+          <!-- User dropdown -->
+          <div class="dropdown">
+            <button class="btn d-flex align-items-center gap-2 py-1 px-2"
+              style="background:rgba(76,175,80,0.08);border:1px solid rgba(76,175,80,0.2);border-radius:10px;"
+              data-bs-toggle="dropdown">
+              <div class="avatar-circle" style="width:32px;height:32px;font-size:0.8rem;">
+                {{ userInitials }}
+              </div>
+              <span class="d-none d-md-inline" style="font-size:0.85rem;color:var(--trek-text-secondary);font-weight:600;">
+                {{ authenticatedUserSession.user_full_name.split(' ')[0] }}
+              </span>
+              <i class="bi bi-chevron-down" style="font-size:0.7rem;color:var(--trek-text-muted);"></i>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end"
+              style="background:var(--trek-bg-card);border:1px solid rgba(76,175,80,0.2);border-radius:12px;min-width:200px;padding:0.5rem;">
+              <li>
+                <div class="px-3 py-2 border-bottom" style="border-color:rgba(76,175,80,0.1)!important;">
+                  <div style="font-weight:700;font-size:0.9rem;color:var(--trek-text-primary);">{{ authenticatedUserSession.user_full_name }}</div>
+                  <div style="font-size:0.78rem;color:var(--trek-text-muted);">{{ authenticatedUserSession.user_email_address }}</div>
+                </div>
+              </li>
+              <li>
+                <a class="dropdown-item sidebar-link" href="#" @click.prevent="navigateTo('profile')">
+                  <i class="bi bi-person-circle"></i> My Profile
+                </a>
+              </li>
+              <li v-if="authenticatedUserSession.assigned_platform_role === 'Trekker'">
+                <a class="dropdown-item sidebar-link" href="#" @click.prevent="navigateTo('bookings')">
+                  <i class="bi bi-calendar-check"></i> My Bookings
+                </a>
+              </li>
+              <li><hr class="dropdown-divider" style="border-color:rgba(76,175,80,0.1);margin:0.25rem 0;"></li>
+              <li>
+                <a class="dropdown-item sidebar-link" href="#" @click.prevent="handleLogout"
+                  style="color:var(--trek-danger)!important;">
+                  <i class="bi bi-box-arrow-right"></i> Sign Out
+                </a>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Sidebar overlay (mobile) -->
+    <div id="sidebar-overlay" :class="{ visible: sidebarOpen }" @click="toggleSidebar"></div>
+
+    <!-- ========================================================
+         SIDEBAR NAVIGATION
+    ======================================================== -->
+    <nav id="trek-sidebar" :class="{ 'sidebar-open': sidebarOpen }">
+      <div class="pt-4">
+
+        <!-- ADMIN SIDEBAR -->
+        <template v-if="authenticatedUserSession.assigned_platform_role === 'Admin'">
+          <div class="sidebar-section-label">Overview</div>
+          <a class="sidebar-link" :class="{ active: currentView === 'admin-dashboard' }"
+            @click.prevent="navigateTo('admin-dashboard')">
+            <i class="bi bi-speedometer2"></i> Dashboard
+          </a>
+          <div class="sidebar-section-label">Expeditions</div>
+          <a class="sidebar-link" :class="{ active: currentView === 'admin-expeditions' }"
+            @click.prevent="navigateTo('admin-expeditions')">
+            <i class="bi bi-map"></i> All Expeditions
+          </a>
+          <a class="sidebar-link" :class="{ active: currentView === 'admin-create-expedition' }"
+            @click.prevent="navigateTo('admin-create-expedition')">
+            <i class="bi bi-plus-circle"></i> Create Expedition
+          </a>
+          <div class="sidebar-section-label">People</div>
+          <a class="sidebar-link" :class="{ active: currentView === 'admin-users' }"
+            @click.prevent="navigateTo('admin-users')">
+            <i class="bi bi-people"></i> Manage Users
+          </a>
+          <a class="sidebar-link" :class="{ active: currentView === 'admin-create-staff' }"
+            @click.prevent="navigateTo('admin-create-staff')">
+            <i class="bi bi-person-plus"></i> Add Staff
+          </a>
+          <div class="sidebar-section-label">Analytics</div>
+          <a class="sidebar-link" :class="{ active: currentView === 'admin-analytics' }"
+            @click.prevent="navigateTo('admin-analytics')">
+            <i class="bi bi-bar-chart-line"></i> Analytics
+          </a>
+        </template>
+
+        <!-- STAFF SIDEBAR -->
+        <template v-else-if="authenticatedUserSession.assigned_platform_role === 'Staff'">
+          <div class="sidebar-section-label">Overview</div>
+          <a class="sidebar-link" :class="{ active: currentView === 'staff-dashboard' }"
+            @click.prevent="navigateTo('staff-dashboard')">
+            <i class="bi bi-speedometer2"></i> Dashboard
+          </a>
+          <div class="sidebar-section-label">My Expeditions</div>
+          <a class="sidebar-link" :class="{ active: currentView === 'staff-expeditions' }"
+            @click.prevent="navigateTo('staff-expeditions')">
+            <i class="bi bi-map-fill"></i> Assigned Treks
+          </a>
+        </template>
+
+        <!-- TREKKER SIDEBAR -->
+        <template v-else>
+          <div class="sidebar-section-label">Explore</div>
+          <a class="sidebar-link" :class="{ active: currentView === 'trekker-dashboard' }"
+            @click.prevent="navigateTo('trekker-dashboard')">
+            <i class="bi bi-house"></i> Home
+          </a>
+          <a class="sidebar-link" :class="{ active: currentView === 'trekker-explore' }"
+            @click.prevent="navigateTo('trekker-explore')">
+            <i class="bi bi-search"></i> Explore Treks
+          </a>
+          <div class="sidebar-section-label">My Activity</div>
+          <a class="sidebar-link" :class="{ active: currentView === 'bookings' }"
+            @click.prevent="navigateTo('bookings')">
+            <i class="bi bi-calendar-check"></i> My Bookings
+          </a>
+          <a class="sidebar-link" :class="{ active: currentView === 'profile' }"
+            @click.prevent="navigateTo('profile')">
+            <i class="bi bi-person-circle"></i> Profile
+          </a>
+        </template>
+
+        <!-- Common -->
+        <div class="px-3 mt-4 mb-2">
+          <div style="font-size:0.7rem;color:var(--trek-text-muted);text-align:center;line-height:1.6;">
+            TrekVista Platform V2<br/>
+            <span style="font-size:0.65rem;">Built with Flask + Vue 3</span>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <!-- ========================================================
+         MAIN CONTENT AREA — Dynamic Views
+    ======================================================== -->
+    <main id="trek-main-content" style="padding-top: 80px;">
+
+      <!-- ====================================================
+           ADMIN: DASHBOARD
+      ==================================================== -->
+      <div v-if="currentView === 'admin-dashboard'" class="animate-in">
+        <div class="dashboard-hero">
+          <div class="hero-badge"><i class="bi bi-shield-check me-1"></i>Administrator</div>
+          <h1>Welcome back, {{ authenticatedUserSession.user_full_name.split(' ')[0] }}</h1>
+          <p class="hero-sub">Here's your platform overview for today.</p>
+        </div>
+
+        <!-- Metric Cards -->
+        <div class="row g-3 mb-4">
+          <div class="col-6 col-md-3" v-for="metric in adminDashboardMetrics" :key="metric.key">
+            <div class="metric-card count-up-animate">
+              <div class="metric-card-icon" :class="metric.iconBg">
+                <i :class="metric.icon"></i>
+              </div>
+              <div class="metric-value">{{ metric.value }}</div>
+              <div class="metric-label">{{ metric.label }}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="row g-3 mb-4">
+          <div class="col-md-6">
+            <div class="chart-card">
+              <div class="chart-title"><i class="bi bi-bar-chart-fill"></i>Expeditions by Difficulty</div>
+              <canvas id="admin-difficulty-chart" height="220"></canvas>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="chart-card">
+              <div class="chart-title"><i class="bi bi-pie-chart-fill"></i>Booking Status Distribution</div>
+              <canvas id="admin-booking-chart" height="220"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent Expeditions Mini Table -->
+        <div class="glass-panel p-3">
+          <div class="section-header mb-3">
+            <h6 class="section-title mb-0">Recent Expeditions</h6>
+            <button class="btn btn-trek-outline btn-sm" @click="navigateTo('admin-expeditions')">
+              View All <i class="bi bi-arrow-right ms-1"></i>
+            </button>
+          </div>
+          <div class="table-responsive">
+            <table class="trek-table">
+              <thead>
+                <tr>
+                  <th>Expedition Name</th>
+                  <th>Difficulty</th>
+                  <th>Status</th>
+                  <th>Slots</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-if="adminRecentExpeditions.length === 0">
+                  <td colspan="5" class="text-center py-4" style="color:var(--trek-text-muted);">
+                    No expeditions yet. <a href="#" @click.prevent="navigateTo('admin-create-expedition')" class="text-trek-primary">Create one →</a>
+                  </td>
+                </tr>
+                <tr v-for="expedition in adminRecentExpeditions" :key="expedition.trekking_route_expedition_id">
+                  <td style="color:var(--trek-text-primary);font-weight:600;">{{ expedition.expedition_route_name }}</td>
+                  <td>
+                    <span class="trek-badge" :class="difficultyBadgeClass(expedition.expedition_difficulty_level)">
+                      {{ expedition.expedition_difficulty_level }}
+                    </span>
+                  </td>
+                  <td>
+                    <span class="trek-badge" :class="statusBadgeClass(expedition.current_expedition_lifecycle_status)">
+                      {{ expedition.current_expedition_lifecycle_status }}
+                    </span>
+                  </td>
+                  <td>
+                    <span style="font-size:0.82rem;">
+                      {{ expedition.available_participant_slots_remaining }}/{{ expedition.total_participant_slots_capacity }}
+                    </span>
+                  </td>
+                  <td>
+                    <button class="btn btn-sm btn-trek-outline me-1" @click="openAdminEditExpeditionModal(expedition)">
+                      <i class="bi bi-pencil"></i>
+                    </button>
+                    <button class="btn btn-sm btn-trek-danger" @click="confirmDeleteExpedition(expedition)">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ====================================================
+           ADMIN: EXPEDITIONS LIST
+      ==================================================== -->
+      <div v-if="currentView === 'admin-expeditions'" class="animate-in">
+        <div class="section-header">
+          <h2 class="section-title">All <span>Expeditions</span></h2>
+          <div class="d-flex gap-2 flex-wrap">
+            <select class="form-select form-select-sm" v-model="adminExpeditionsStatusFilter" @change="loadAdminExpeditions"
+              style="width:auto;font-size:0.83rem;">
+              <option value="">All Statuses</option>
+              <option v-for="s in expeditionStatuses" :key="s" :value="s">{{ s }}</option>
+            </select>
+            <button class="btn btn-trek-primary btn-sm" @click="navigateTo('admin-create-expedition')">
+              <i class="bi bi-plus-lg me-1"></i>New Expedition
+            </button>
+          </div>
+        </div>
+
+        <div class="table-responsive glass-panel p-3">
+          <table class="trek-table">
+            <thead>
+              <tr>
+                <th>Expedition</th><th>Location</th><th>Difficulty</th><th>Duration</th>
+                <th>Price</th><th>Slots</th><th>Staff</th><th>Status</th><th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-if="adminAllExpeditions.length === 0">
+                <td colspan="9" class="py-4">
+                  <div class="empty-state">
+                    <div class="empty-state-icon">🗺️</div>
+                    <p>No expeditions found. Create your first one!</p>
+                  </div>
+                </td>
+              </tr>
+              <tr v-for="exp in adminAllExpeditions" :key="exp.trekking_route_expedition_id">
+                <td style="font-weight:600;color:var(--trek-text-primary);max-width:200px;">
+                  <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ exp.expedition_route_name }}</div>
+                </td>
+                <td style="font-size:0.82rem;">{{ exp.expedition_geographical_location }}</td>
+                <td><span class="trek-badge" :class="difficultyBadgeClass(exp.expedition_difficulty_level)">{{ exp.expedition_difficulty_level }}</span></td>
+                <td style="font-size:0.82rem;">{{ exp.expedition_duration_in_days }}d</td>
+                <td style="font-size:0.82rem;">₹{{ exp.expedition_price_per_person_inr?.toLocaleString() || 0 }}</td>
+                <td style="font-size:0.82rem;">{{ exp.available_participant_slots_remaining }}/{{ exp.total_participant_slots_capacity }}</td>
+                <td style="font-size:0.82rem;">{{ exp.assigned_staff_leader_name }}</td>
+                <td><span class="trek-badge" :class="statusBadgeClass(exp.current_expedition_lifecycle_status)">{{ exp.current_expedition_lifecycle_status }}</span></td>
+                <td>
+                  <button class="btn btn-sm btn-trek-outline me-1" @click="openAdminEditExpeditionModal(exp)" title="Edit">
+                    <i class="bi bi-pencil"></i>
+                  </button>
+                  <button class="btn btn-sm me-1"
+                    style="background:rgba(41,182,246,0.1);border:1px solid rgba(41,182,246,0.3);color:#29b6f6;border-radius:6px;"
+                    @click="viewExpeditionParticipants(exp)" title="Participants">
+                    <i class="bi bi-people"></i>
+                  </button>
+                  <button class="btn btn-sm btn-trek-danger" @click="confirmDeleteExpedition(exp)" title="Delete">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination -->
+        <div class="d-flex justify-content-between align-items-center mt-3" v-if="adminExpeditionsPagination.total_pages > 1">
+          <span style="font-size:0.82rem;color:var(--trek-text-muted);">
+            Page {{ adminExpeditionsPagination.current_page }} of {{ adminExpeditionsPagination.total_pages }}
+            ({{ adminExpeditionsPagination.total_expedition_count }} total)
+          </span>
+          <div class="btn-group">
+            <button class="btn btn-trek-outline btn-sm" :disabled="!adminExpeditionsPagination.has_previous_page"
+              @click="adminExpeditionsPage--; loadAdminExpeditions()">← Prev</button>
+            <button class="btn btn-trek-outline btn-sm" :disabled="!adminExpeditionsPagination.has_next_page"
+              @click="adminExpeditionsPage++; loadAdminExpeditions()">Next →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ====================================================
+           ADMIN: CREATE EXPEDITION FORM
+      ==================================================== -->
+      <div v-if="currentView === 'admin-create-expedition'" class="animate-in">
+        <div class="section-header">
+          <h2 class="section-title">Create <span>Expedition</span></h2>
+          <button class="btn btn-trek-outline btn-sm" @click="navigateTo('admin-expeditions')">
+            <i class="bi bi-arrow-left me-1"></i>Back
+          </button>
+        </div>
+
+        <div class="glass-panel p-4">
+          <form id="create-expedition-form" @submit.prevent="handleCreateExpeditionSubmission" novalidate>
+            <div class="row g-3">
+              <div class="col-md-8">
+                <label class="form-label">Expedition Route Name *</label>
+                <input type="text" class="form-control"
+                  :class="{ 'is-invalid': expeditionFormErrors.expedition_route_name }"
+                  v-model="expeditionFormData.expedition_route_name"
+                  placeholder="e.g. Roopkund Trek — Winter 2026" />
+                <div class="invalid-feedback">{{ expeditionFormErrors.expedition_route_name }}</div>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Difficulty Level *</label>
+                <select class="form-select"
+                  :class="{ 'is-invalid': expeditionFormErrors.expedition_difficulty_level }"
+                  v-model="expeditionFormData.expedition_difficulty_level">
+                  <option value="">Select...</option>
+                  <option value="Easy">Easy</option>
+                  <option value="Moderate">Moderate</option>
+                  <option value="Hard">Hard</option>
+                </select>
+                <div class="invalid-feedback">{{ expeditionFormErrors.expedition_difficulty_level }}</div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Geographical Location *</label>
+                <input type="text" class="form-control"
+                  :class="{ 'is-invalid': expeditionFormErrors.expedition_geographical_location }"
+                  v-model="expeditionFormData.expedition_geographical_location"
+                  placeholder="e.g. Uttarakhand, India" />
+                <div class="invalid-feedback">{{ expeditionFormErrors.expedition_geographical_location }}</div>
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">Duration (Days) *</label>
+                <input type="number" class="form-control" min="1" max="365"
+                  :class="{ 'is-invalid': expeditionFormErrors.expedition_duration_in_days }"
+                  v-model.number="expeditionFormData.expedition_duration_in_days" />
+                <div class="invalid-feedback">{{ expeditionFormErrors.expedition_duration_in_days }}</div>
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">Price per Person (₹) *</label>
+                <input type="number" class="form-control" min="0"
+                  v-model.number="expeditionFormData.expedition_price_per_person_inr"
+                  placeholder="0 for free" />
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Start Date</label>
+                <input type="date" class="form-control"
+                  v-model="expeditionFormData.expedition_scheduled_start_date" />
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">End Date</label>
+                <input type="date" class="form-control"
+                  v-model="expeditionFormData.expedition_scheduled_end_date" />
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Booking Cutoff Date</label>
+                <input type="date" class="form-control"
+                  v-model="expeditionFormData.expedition_booking_cutoff_date" />
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Total Slots *</label>
+                <input type="number" class="form-control" min="1" max="500"
+                  :class="{ 'is-invalid': expeditionFormErrors.total_participant_slots_capacity }"
+                  v-model.number="expeditionFormData.total_participant_slots_capacity" />
+                <div class="invalid-feedback">{{ expeditionFormErrors.total_participant_slots_capacity }}</div>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Assign Staff Leader</label>
+                <select class="form-select" v-model="expeditionFormData.assigned_staff_leader_id">
+                  <option :value="null">Unassigned</option>
+                  <option v-for="staff in allStaffAccounts" :key="staff.user_account_id" :value="staff.user_account_id">
+                    {{ staff.user_full_name }}
+                  </option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Cover Image URL</label>
+                <input type="url" class="form-control"
+                  v-model="expeditionFormData.expedition_cover_image_url"
+                  placeholder="https://..." />
+              </div>
+              <div class="col-12">
+                <label class="form-label">Meeting Point Address</label>
+                <input type="text" class="form-control"
+                  v-model="expeditionFormData.expedition_meeting_point_address"
+                  placeholder="Assembly point / landmark" />
+              </div>
+              <div class="col-12">
+                <label class="form-label">Detailed Description</label>
+                <textarea class="form-control" rows="4"
+                  v-model="expeditionFormData.expedition_detailed_description"
+                  placeholder="Full route description, highlights, requirements..."></textarea>
+              </div>
+            </div>
+
+            <div v-if="expeditionFormApiError" class="alert mt-3 py-2"
+              style="background:rgba(239,83,80,0.1);border-color:rgba(239,83,80,0.3);color:#ef9a9a;border-radius:8px;font-size:0.85rem;">
+              <i class="bi bi-exclamation-triangle me-2"></i>{{ expeditionFormApiError }}
+            </div>
+
+            <div class="mt-4 d-flex gap-2">
+              <button type="submit" class="btn btn-trek-primary" :disabled="expeditionFormSubmitting">
+                <span v-if="expeditionFormSubmitting">
+                  <span class="spinner-border spinner-border-sm me-2"></span>Creating...
+                </span>
+                <span v-else><i class="bi bi-plus-circle me-2"></i>Create Expedition</span>
+              </button>
+              <button type="button" class="btn btn-trek-outline" @click="resetExpeditionForm">
+                <i class="bi bi-arrow-counterclockwise me-1"></i>Reset
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- ====================================================
+           ADMIN: USER MANAGEMENT
+      ==================================================== -->
+      <div v-if="currentView === 'admin-users'" class="animate-in">
+        <div class="section-header">
+          <h2 class="section-title">User <span>Management</span></h2>
+          <div class="d-flex gap-2 flex-wrap">
+            <input type="text" class="form-control form-control-sm" v-model="userSearchKeyword"
+              @input="debouncedUserSearch" placeholder="Search users..."
+              style="width:200px;font-size:0.83rem;" />
+            <select class="form-select form-select-sm" v-model="userRoleFilter" @change="loadAdminUsers"
+              style="width:auto;font-size:0.83rem;">
+              <option value="">All Roles</option>
+              <option value="Trekker">Trekkers</option>
+              <option value="Staff">Staff</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="glass-panel p-3">
+          <div class="table-responsive">
+            <table class="trek-table">
+              <thead>
+                <tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Joined</th><th>Actions</th></tr>
+              </thead>
+              <tbody>
+                <tr v-if="adminAllUsers.length === 0">
+                  <td colspan="6" class="py-4 text-center" style="color:var(--trek-text-muted);">No users found.</td>
+                </tr>
+                <tr v-for="user in adminAllUsers" :key="user.user_account_id">
+                  <td>
+                    <div class="d-flex align-items-center gap-2">
+                      <div class="avatar-circle" style="width:32px;height:32px;font-size:0.72rem;flex-shrink:0;">
+                        {{ user.user_full_name.slice(0,2).toUpperCase() }}
+                      </div>
+                      <span style="font-weight:600;color:var(--trek-text-primary);font-size:0.88rem;">{{ user.user_full_name }}</span>
+                    </div>
+                  </td>
+                  <td style="font-size:0.82rem;">{{ user.user_email_address }}</td>
+                  <td>
+                    <span class="trek-badge" :class="user.assigned_platform_role === 'Staff' ? 'badge-approved' : 'badge-booked'">
+                      {{ user.assigned_platform_role }}
+                    </span>
+                  </td>
+                  <td>
+                    <span class="trek-badge" v-if="user.is_account_blacklisted" style="background:rgba(239,83,80,0.15);color:#ef9a9a;">
+                      <i class="bi bi-ban me-1"></i>Blacklisted
+                    </span>
+                    <span class="trek-badge badge-open" v-else>
+                      <i class="bi bi-check-circle me-1"></i>Active
+                    </span>
+                  </td>
+                  <td style="font-size:0.78rem;color:var(--trek-text-muted);">
+                    {{ formatDate(user.account_created_at_utc) }}
+                  </td>
+                  <td>
+                    <button class="btn btn-sm"
+                      :class="user.is_account_blacklisted ? 'btn-trek-outline' : 'btn-trek-danger'"
+                      @click="toggleUserBlacklist(user)"
+                      :title="user.is_account_blacklisted ? 'Remove Blacklist' : 'Blacklist User'">
+                      <i :class="user.is_account_blacklisted ? 'bi bi-shield-check' : 'bi bi-ban'"></i>
+                      {{ user.is_account_blacklisted ? 'Unban' : 'Ban' }}
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ====================================================
+           ADMIN: ADD STAFF
+      ==================================================== -->
+      <div v-if="currentView === 'admin-create-staff'" class="animate-in">
+        <div class="section-header">
+          <h2 class="section-title">Add Trek <span>Staff</span></h2>
+          <button class="btn btn-trek-outline btn-sm" @click="navigateTo('admin-users')">
+            <i class="bi bi-arrow-left me-1"></i>Back
+          </button>
+        </div>
+        <div class="glass-panel p-4" style="max-width:560px;">
+          <form @submit.prevent="handleCreateStaffSubmission" novalidate>
+            <div class="mb-3">
+              <label class="form-label">Full Name *</label>
+              <input type="text" class="form-control"
+                :class="{ 'is-invalid': staffFormErrors.user_full_name }"
+                v-model="staffFormData.user_full_name" placeholder="Staff member's full name" />
+              <div class="invalid-feedback">{{ staffFormErrors.user_full_name }}</div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Email Address *</label>
+              <input type="email" class="form-control"
+                :class="{ 'is-invalid': staffFormErrors.user_email_address }"
+                v-model="staffFormData.user_email_address" placeholder="staff@trekapp.com" />
+              <div class="invalid-feedback">{{ staffFormErrors.user_email_address }}</div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Phone Number</label>
+              <input type="tel" class="form-control" v-model="staffFormData.user_contact_phone_number" />
+            </div>
+            <div class="mb-4">
+              <label class="form-label">Initial Password *</label>
+              <input type="password" class="form-control"
+                :class="{ 'is-invalid': staffFormErrors.raw_password }"
+                v-model="staffFormData.raw_password"
+                placeholder="Communicate securely to the staff member" />
+              <div class="invalid-feedback">{{ staffFormErrors.raw_password }}</div>
+            </div>
+            <div v-if="staffFormApiError" class="alert py-2 mb-3"
+              style="background:rgba(239,83,80,0.1);border-color:rgba(239,83,80,0.3);color:#ef9a9a;border-radius:8px;font-size:0.85rem;">
+              {{ staffFormApiError }}
+            </div>
+            <button type="submit" class="btn btn-trek-primary" :disabled="staffFormSubmitting">
+              <span v-if="staffFormSubmitting"><span class="spinner-border spinner-border-sm me-2"></span>Creating...</span>
+              <span v-else><i class="bi bi-person-plus me-2"></i>Create Staff Account</span>
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- ====================================================
+           ADMIN: ANALYTICS
+      ==================================================== -->
+      <div v-if="currentView === 'admin-analytics'" class="animate-in">
+        <div class="section-header">
+          <h2 class="section-title">Platform <span>Analytics</span></h2>
+        </div>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <div class="chart-card">
+              <div class="chart-title"><i class="bi bi-trophy-fill"></i>Popular Expeditions (by Bookings)</div>
+              <canvas id="popular-treks-chart" height="300"></canvas>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="chart-card">
+              <div class="chart-title"><i class="bi bi-graph-up-arrow"></i>User Participation (by Difficulty)</div>
+              <canvas id="difficulty-participation-chart" height="300"></canvas>
+            </div>
+          </div>
+          <div class="col-12">
+            <div class="chart-card">
+              <div class="chart-title"><i class="bi bi-calendar3"></i>Bookings Over Time (Monthly)</div>
+              <canvas id="bookings-timeline-chart" height="200"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ====================================================
+           STAFF: DASHBOARD
+      ==================================================== -->
+      <div v-if="currentView === 'staff-dashboard'" class="animate-in">
+        <div class="dashboard-hero">
+          <div class="hero-badge"><i class="bi bi-person-badge me-1"></i>Trek Staff</div>
+          <h1>Welcome, {{ authenticatedUserSession.user_full_name.split(' ')[0] }}</h1>
+          <p class="hero-sub">Manage your assigned expeditions and participants.</p>
+        </div>
+
+        <div class="row g-3 mb-4" v-if="staffDashboardSummary">
+          <div class="col-6 col-md-3" v-for="stat in staffDashboardStats" :key="stat.label">
+            <div class="metric-card count-up-animate">
+              <div class="metric-card-icon" :class="stat.iconBg">
+                <i :class="stat.icon"></i>
+              </div>
+              <div class="metric-value">{{ stat.value }}</div>
+              <div class="metric-label">{{ stat.label }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="glass-panel p-3">
+          <h6 class="section-title mb-3">Open Assigned Expeditions</h6>
+          <div v-if="staffOpenExpeditions.length === 0" class="empty-state">
+            <div class="empty-state-icon">🏕️</div>
+            <p>No open expeditions assigned to you currently.</p>
+          </div>
+          <div class="row g-3" v-else>
+            <div class="col-md-6 col-lg-4" v-for="exp in staffOpenExpeditions" :key="exp.trekking_route_expedition_id">
+              <div class="trek-card" @click="openStaffExpeditionManageModal(exp)">
+                <div class="trek-card-body p-3">
+                  <div class="trek-card-name">{{ exp.expedition_route_name }}</div>
+                  <div class="trek-card-location"><i class="bi bi-geo-alt-fill"></i>{{ exp.expedition_geographical_location }}</div>
+                  <div class="d-flex justify-content-between align-items-center">
+                    <span class="trek-badge" :class="statusBadgeClass(exp.current_expedition_lifecycle_status)">
+                      {{ exp.current_expedition_lifecycle_status }}
+                    </span>
+                    <span style="font-size:0.82rem;color:var(--trek-text-muted);">
+                      {{ exp.available_participant_slots_remaining }} slots left
+                    </span>
+                  </div>
+                  <div class="trek-slot-bar mt-2">
+                    <div class="trek-slot-fill" :style="{ width: slotFillPercent(exp) + '%' }"></div>
+                  </div>
+                  <button class="btn btn-trek-primary btn-sm w-100 mt-2" @click.stop="openStaffExpeditionManageModal(exp)">
+                    <i class="bi bi-gear me-1"></i>Manage
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ====================================================
+           STAFF: ALL ASSIGNED EXPEDITIONS
+      ==================================================== -->
+      <div v-if="currentView === 'staff-expeditions'" class="animate-in">
+        <div class="section-header">
+          <h2 class="section-title">Assigned <span>Expeditions</span></h2>
+          <select class="form-select form-select-sm" v-model="staffExpeditionsFilter" @change="loadStaffAssignedExpeditions"
+            style="width:auto;font-size:0.83rem;">
+            <option value="">All</option>
+            <option v-for="s in expeditionStatuses" :key="s" :value="s">{{ s }}</option>
+          </select>
+        </div>
+
+        <div class="row g-3">
+          <div v-if="staffAllAssignedExpeditions.length === 0" class="col-12">
+            <div class="empty-state glass-panel p-5">
+              <div class="empty-state-icon">🗺️</div>
+              <p>No expeditions assigned yet.</p>
+            </div>
+          </div>
+          <div class="col-md-6 col-lg-4" v-for="exp in staffAllAssignedExpeditions" :key="exp.trekking_route_expedition_id">
+            <div class="trek-card">
+              <div class="trek-card-image">
+                <img v-if="exp.expedition_cover_image_url" :src="exp.expedition_cover_image_url" :alt="exp.expedition_route_name" loading="lazy" />
+                <div v-else class="trek-card-image-placeholder">⛰️</div>
+                <span class="trek-card-difficulty-badge trek-badge" :class="difficultyBadgeClass(exp.expedition_difficulty_level)">
+                  {{ exp.expedition_difficulty_level }}
+                </span>
+                <span class="trek-card-status-badge trek-badge" :class="statusBadgeClass(exp.current_expedition_lifecycle_status)">
+                  {{ exp.current_expedition_lifecycle_status }}
+                </span>
+              </div>
+              <div class="trek-card-body">
+                <div class="trek-card-name">{{ exp.expedition_route_name }}</div>
+                <div class="trek-card-location"><i class="bi bi-geo-alt-fill"></i>{{ exp.expedition_geographical_location }}</div>
+                <div class="trek-meta-grid">
+                  <div class="trek-meta-item">
+                    <span class="meta-val">{{ exp.expedition_duration_in_days }}d</span>
+                    <span class="meta-key">Duration</span>
+                  </div>
+                  <div class="trek-meta-item">
+                    <span class="meta-val">{{ exp.available_participant_slots_remaining }}</span>
+                    <span class="meta-key">Slots Left</span>
+                  </div>
+                </div>
+                <div class="trek-slot-bar mb-2">
+                  <div class="trek-slot-fill" :style="{ width: slotFillPercent(exp) + '%' }"></div>
+                </div>
+                <div class="d-flex gap-2">
+                  <button class="btn btn-trek-primary btn-sm flex-fill" @click="openStaffExpeditionManageModal(exp)">
+                    <i class="bi bi-gear me-1"></i>Manage
+                  </button>
+                  <button class="btn btn-trek-outline btn-sm" @click="openStaffParticipantsModal(exp)">
+                    <i class="bi bi-people"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ====================================================
+           TREKKER: HOME DASHBOARD
+      ==================================================== -->
+      <div v-if="currentView === 'trekker-dashboard'" class="animate-in">
+        <div class="dashboard-hero">
+          <div class="hero-badge"><i class="bi bi-backpack me-1"></i>Trekker</div>
+          <h1>Hello, {{ authenticatedUserSession.user_full_name.split(' ')[0] }}! 🌿</h1>
+          <p class="hero-sub">Ready for your next adventure? Explore open expeditions.</p>
+          <button class="btn btn-trek-primary mt-2" @click="navigateTo('trekker-explore')">
+            <i class="bi bi-search me-2"></i>Explore Treks
+          </button>
+        </div>
+
+        <div class="row g-3 mb-4">
+          <div class="col-6 col-md-3">
+            <div class="metric-card count-up-animate">
+              <div class="metric-card-icon metric-icon-green"><i class="bi bi-calendar-check"></i></div>
+              <div class="metric-value">{{ trekkerStats.totalBookings }}</div>
+              <div class="metric-label">Total Bookings</div>
+            </div>
+          </div>
+          <div class="col-6 col-md-3">
+            <div class="metric-card count-up-animate">
+              <div class="metric-card-icon metric-icon-gold"><i class="bi bi-flag-fill"></i></div>
+              <div class="metric-value">{{ trekkerStats.completedTreks }}</div>
+              <div class="metric-label">Completed Treks</div>
+            </div>
+          </div>
+          <div class="col-6 col-md-3">
+            <div class="metric-card count-up-animate">
+              <div class="metric-card-icon metric-icon-blue"><i class="bi bi-clock-history"></i></div>
+              <div class="metric-value">{{ trekkerStats.upcomingTreks }}</div>
+              <div class="metric-label">Upcoming</div>
+            </div>
+          </div>
+          <div class="col-6 col-md-3">
+            <div class="metric-card count-up-animate">
+              <div class="metric-card-icon metric-icon-red"><i class="bi bi-x-circle"></i></div>
+              <div class="metric-value">{{ trekkerStats.cancelledTreks }}</div>
+              <div class="metric-label">Cancelled</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Upcoming Bookings -->
+        <div class="glass-panel p-3 mb-3">
+          <div class="section-header mb-3">
+            <h6 class="section-title mb-0">Upcoming Treks</h6>
+            <button class="btn btn-trek-outline btn-sm" @click="navigateTo('bookings')">View All</button>
+          </div>
+          <div v-if="trekkerUpcomingBookings.length === 0" class="empty-state py-3">
+            <div class="empty-state-icon" style="font-size:2rem;">🏔️</div>
+            <p style="font-size:0.88rem;">No upcoming treks. <a href="#" @click.prevent="navigateTo('trekker-explore')" class="text-trek-primary">Book one now!</a></p>
+          </div>
+          <div v-for="bk in trekkerUpcomingBookings" :key="bk.participant_booking_record_id"
+            class="d-flex align-items-center gap-3 p-2 mb-2"
+            style="background:rgba(76,175,80,0.06);border-radius:10px;border:1px solid rgba(76,175,80,0.1);">
+            <div style="font-size:2rem;">⛺</div>
+            <div class="flex-fill">
+              <div style="font-weight:700;font-size:0.9rem;color:var(--trek-text-primary);">{{ bk.expedition_route_name }}</div>
+              <div style="font-size:0.78rem;color:var(--trek-text-muted);">
+                📅 {{ formatDate(bk.expedition_scheduled_start_date) }} · {{ bk.expedition_geographical_location }}
+              </div>
+            </div>
+            <span class="trek-badge badge-booked">{{ bk.current_booking_lifecycle_status }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ====================================================
+           TREKKER: EXPLORE OPEN TREKS
+      ==================================================== -->
+      <div v-if="currentView === 'trekker-explore'" class="animate-in">
+        <div class="section-header">
+          <h2 class="section-title">Explore <span>Treks</span></h2>
+          <span style="font-size:0.82rem;color:var(--trek-text-muted);">
+            {{ openTreksPagination.total_open_expedition_count || 0 }} open expeditions
+          </span>
+        </div>
+
+        <!-- Filter Bar -->
+        <div class="filter-bar mb-4">
+          <div class="row g-2 align-items-end">
+            <div class="col-6 col-md-3">
+              <label class="form-label mb-1" style="font-size:0.78rem;">Difficulty</label>
+              <select class="form-select form-select-sm" v-model="trekFilterParams.difficulty_level_filter" @change="loadOpenExpeditions(1)">
+                <option value="">Any</option>
+                <option value="Easy">Easy</option>
+                <option value="Moderate">Moderate</option>
+                <option value="Hard">Hard</option>
+              </select>
+            </div>
+            <div class="col-6 col-md-3">
+              <label class="form-label mb-1" style="font-size:0.78rem;">Location</label>
+              <input type="text" class="form-control form-control-sm"
+                v-model="trekFilterParams.geographical_location_keyword"
+                @input="debouncedTrekSearch"
+                placeholder="Search location..." />
+            </div>
+            <div class="col-6 col-md-2">
+              <label class="form-label mb-1" style="font-size:0.78rem;">Max Price (₹)</label>
+              <input type="number" class="form-control form-control-sm"
+                v-model.number="trekFilterParams.maximum_price_inr"
+                @change="loadOpenExpeditions(1)"
+                placeholder="Any" min="0" />
+            </div>
+            <div class="col-6 col-md-2">
+              <label class="form-label mb-1" style="font-size:0.78rem;">Max Duration (days)</label>
+              <input type="number" class="form-control form-control-sm"
+                v-model.number="trekFilterParams.maximum_duration_days"
+                @change="loadOpenExpeditions(1)"
+                placeholder="Any" min="1" />
+            </div>
+            <div class="col-md-2">
+              <button class="btn btn-trek-outline btn-sm w-100" @click="clearTrekFilters">
+                <i class="bi bi-x-circle me-1"></i>Clear
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Trek Cards Grid -->
+        <div class="row g-3">
+          <div v-if="trekkerOpenExpeditions.length === 0 && !expeditionsLoading" class="col-12">
+            <div class="empty-state glass-panel p-5">
+              <div class="empty-state-icon">🔍</div>
+              <p>No open expeditions match your filters. Try broadening your search!</p>
+            </div>
+          </div>
+          <div v-if="expeditionsLoading" class="col-12 text-center py-5">
+            <div class="trek-spinner mx-auto"></div>
+            <p class="mt-3" style="color:var(--trek-text-muted);">Loading expeditions...</p>
+          </div>
+          <div class="col-md-6 col-lg-4 col-xl-3"
+            v-for="exp in trekkerOpenExpeditions"
+            :key="exp.trekking_route_expedition_id"
+            class="animate-in">
+            <div class="trek-card h-100">
+              <div class="trek-card-image">
+                <img v-if="exp.expedition_cover_image_url" :src="exp.expedition_cover_image_url" :alt="exp.expedition_route_name" loading="lazy" />
+                <div v-else class="trek-card-image-placeholder">⛰️</div>
+                <span class="trek-card-difficulty-badge trek-badge" :class="difficultyBadgeClass(exp.expedition_difficulty_level)">
+                  {{ exp.expedition_difficulty_level }}
+                </span>
+              </div>
+              <div class="trek-card-body d-flex flex-column">
+                <div class="trek-card-name">{{ exp.expedition_route_name }}</div>
+                <div class="trek-card-location">
+                  <i class="bi bi-geo-alt-fill"></i>{{ exp.expedition_geographical_location }}
+                </div>
+                <div class="trek-meta-grid">
+                  <div class="trek-meta-item">
+                    <span class="meta-val">{{ exp.expedition_duration_in_days }}d</span>
+                    <span class="meta-key">Duration</span>
+                  </div>
+                  <div class="trek-meta-item">
+                    <span class="meta-val">₹{{ exp.expedition_price_per_person_inr?.toLocaleString() || 'Free' }}</span>
+                    <span class="meta-key">Per Person</span>
+                  </div>
+                  <div class="trek-meta-item">
+                    <span class="meta-val">{{ exp.available_participant_slots_remaining }}</span>
+                    <span class="meta-key">Slots Left</span>
+                  </div>
+                  <div class="trek-meta-item">
+                    <span class="meta-val" style="font-size:0.78rem;">{{ formatDate(exp.expedition_scheduled_start_date) }}</span>
+                    <span class="meta-key">Start</span>
+                  </div>
+                </div>
+                <div class="trek-slot-bar mb-2 mt-auto">
+                  <div class="trek-slot-fill" :style="{ width: slotFillPercent(exp) + '%' }"></div>
+                </div>
+                <button class="btn btn-trek-primary btn-sm w-100" @click="openBookingModal(exp)">
+                  <i class="bi bi-calendar-plus me-2"></i>Book Now
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pagination -->
+        <div class="d-flex justify-content-center mt-4 gap-2" v-if="openTreksPagination.total_pages > 1">
+          <button class="btn btn-trek-outline btn-sm" :disabled="openTreksPagination.current_page <= 1"
+            @click="loadOpenExpeditions(openTreksPagination.current_page - 1)">
+            <i class="bi bi-chevron-left"></i>
+          </button>
+          <span class="btn btn-sm" style="background:var(--trek-surface);color:var(--trek-text-secondary);cursor:default;border-radius:8px;border:1px solid rgba(76,175,80,0.15);">
+            {{ openTreksPagination.current_page }} / {{ openTreksPagination.total_pages }}
+          </span>
+          <button class="btn btn-trek-outline btn-sm" :disabled="!openTreksPagination.has_next_page"
+            @click="loadOpenExpeditions(openTreksPagination.current_page + 1)">
+            <i class="bi bi-chevron-right"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- ====================================================
+           TREKKER: BOOKING HISTORY
+      ==================================================== -->
+      <div v-if="currentView === 'bookings'" class="animate-in">
+        <div class="section-header">
+          <h2 class="section-title">My <span>Bookings</span></h2>
+          <div class="d-flex gap-2 flex-wrap">
+            <select class="form-select form-select-sm" v-model="bookingStatusFilter" @change="loadTrekkerBookings"
+              style="width:auto;font-size:0.83rem;">
+              <option value="">All Statuses</option>
+              <option value="Booked">Booked</option>
+              <option value="Completed">Completed</option>
+              <option value="Cancelled">Cancelled</option>
+            </select>
+            <button class="btn btn-trek-outline btn-sm" @click="triggerBookingCsvExport" :disabled="csvExportLoading">
+              <span v-if="csvExportLoading"><span class="spinner-border spinner-border-sm me-1"></span>Exporting...</span>
+              <span v-else><i class="bi bi-file-earmark-csv me-1"></i>Export CSV</span>
+            </button>
+          </div>
+        </div>
+
+        <div v-if="trekkerAllBookings.length === 0" class="empty-state glass-panel p-5">
+          <div class="empty-state-icon">📋</div>
+          <p>No bookings yet. <a href="#" @click.prevent="navigateTo('trekker-explore')" class="text-trek-primary">Explore treks →</a></p>
+        </div>
+
+        <div class="row g-3" v-else>
+          <div class="col-md-6" v-for="bk in trekkerAllBookings" :key="bk.participant_booking_record_id">
+            <div class="glass-panel p-3" style="border-radius:var(--trek-radius-md);">
+              <div class="d-flex justify-content-between align-items-start mb-2">
+                <div>
+                  <div style="font-weight:700;color:var(--trek-text-primary);">{{ bk.expedition_route_name }}</div>
+                  <div style="font-size:0.78rem;color:var(--trek-text-muted);">
+                    <i class="bi bi-geo-alt-fill me-1" style="color:var(--trek-primary);"></i>{{ bk.expedition_geographical_location }}
+                  </div>
+                </div>
+                <span class="trek-badge" :class="bookingBadgeClass(bk.current_booking_lifecycle_status)">
+                  {{ bk.current_booking_lifecycle_status }}
+                </span>
+              </div>
+              <div class="row g-2 mb-2" style="font-size:0.78rem;color:var(--trek-text-muted);">
+                <div class="col-6"><i class="bi bi-tag me-1"></i>Ref: <code style="color:var(--trek-primary);font-size:0.75rem;">{{ bk.booking_confirmation_reference_code }}</code></div>
+                <div class="col-6"><i class="bi bi-calendar me-1"></i>Start: {{ formatDate(bk.expedition_scheduled_start_date) }}</div>
+                <div class="col-6"><i class="bi bi-speedometer me-1"></i>{{ bk.expedition_difficulty_level }}</div>
+                <div class="col-6"><i class="bi bi-currency-rupee me-1"></i>₹{{ bk.expedition_price_per_person_inr?.toLocaleString() }}</div>
+              </div>
+              <div v-if="bk.current_booking_lifecycle_status === 'Booked'" class="mt-2">
+                <button class="btn btn-trek-danger btn-sm w-100" @click="openCancelBookingModal(bk)">
+                  <i class="bi bi-x-circle me-1"></i>Cancel Booking
+                </button>
+              </div>
+              <div v-if="bk.cancellation_reason_description" class="mt-2"
+                style="font-size:0.75rem;color:var(--trek-text-muted);padding:6px 8px;background:rgba(239,83,80,0.05);border-radius:6px;">
+                <i class="bi bi-info-circle me-1"></i>{{ bk.cancellation_reason_description }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ====================================================
+           PROFILE VIEW (All Roles)
+      ==================================================== -->
+      <div v-if="currentView === 'profile'" class="animate-in">
+        <div class="section-header">
+          <h2 class="section-title">My <span>Profile</span></h2>
+        </div>
+        <div class="row g-3">
+          <div class="col-md-4">
+            <div class="glass-panel p-4 text-center">
+              <div class="avatar-circle-lg mx-auto mb-3">{{ userInitials }}</div>
+              <h5 style="color:var(--trek-text-primary);font-weight:700;">{{ authenticatedUserSession.user_full_name }}</h5>
+              <div style="font-size:0.83rem;color:var(--trek-text-muted);">{{ authenticatedUserSession.user_email_address }}</div>
+              <span class="trek-badge mt-2 d-inline-block"
+                :class="authenticatedUserSession.assigned_platform_role === 'Admin' ? 'badge-open' :
+                         authenticatedUserSession.assigned_platform_role === 'Staff' ? 'badge-approved' : 'badge-booked'">
+                {{ authenticatedUserSession.assigned_platform_role }}
+              </span>
+            </div>
+          </div>
+          <div class="col-md-8">
+            <div class="glass-panel p-4">
+              <h6 class="section-title mb-3">Update Profile</h6>
+              <form @submit.prevent="handleProfileUpdate" novalidate>
+                <div class="row g-3">
+                  <div class="col-md-6">
+                    <label class="form-label">Full Name</label>
+                    <input type="text" class="form-control" v-model="profileFormData.user_full_name" />
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">Phone Number</label>
+                    <input type="tel" class="form-control" v-model="profileFormData.user_contact_phone_number" />
+                  </div>
+                  <div class="col-12">
+                    <label class="form-label">Bio Summary</label>
+                    <textarea class="form-control" rows="3" v-model="profileFormData.user_profile_bio_summary"
+                      placeholder="Tell us about yourself..."></textarea>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">Emergency Contact Name</label>
+                    <input type="text" class="form-control" v-model="profileFormData.user_emergency_contact_name" />
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">Emergency Contact Phone</label>
+                    <input type="tel" class="form-control" v-model="profileFormData.user_emergency_contact_phone" />
+                  </div>
+                </div>
+                <button type="submit" class="btn btn-trek-primary mt-3" :disabled="profileUpdateSubmitting">
+                  <span v-if="profileUpdateSubmitting"><span class="spinner-border spinner-border-sm me-2"></span>Saving...</span>
+                  <span v-else><i class="bi bi-check-lg me-2"></i>Save Changes</span>
+                </button>
+              </form>
+
+              <hr class="divider-glow" />
+              <h6 class="section-title mb-3">Change Password</h6>
+              <form @submit.prevent="handlePasswordChange" novalidate>
+                <div class="row g-3">
+                  <div class="col-12">
+                    <label class="form-label">Current Password</label>
+                    <input type="password" class="form-control"
+                      :class="{ 'is-invalid': passwordChangeErrors.current_password }"
+                      v-model="passwordChangeData.current_password" />
+                    <div class="invalid-feedback">{{ passwordChangeErrors.current_password }}</div>
+                  </div>
+                  <div class="col-12">
+                    <label class="form-label">New Password</label>
+                    <input type="password" class="form-control"
+                      :class="{ 'is-invalid': passwordChangeErrors.new_password }"
+                      v-model="passwordChangeData.new_password"
+                      placeholder="Min 8 chars, uppercase, digit, special" />
+                    <div class="invalid-feedback">{{ passwordChangeErrors.new_password }}</div>
+                  </div>
+                </div>
+                <button type="submit" class="btn btn-trek-danger mt-3" :disabled="passwordChangeSubmitting">
+                  <span v-if="passwordChangeSubmitting"><span class="spinner-border spinner-border-sm me-2"></span>Changing...</span>
+                  <span v-else><i class="bi bi-lock me-2"></i>Change Password</span>
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div><!-- /authenticated layout -->
+
+  <!-- ================================================================
+       GLOBAL MODALS
+  ================================================================ -->
+
+  <!-- BOOKING MODAL (with payment simulation) -->
+  <div class="modal fade" id="bookingModal" tabindex="-1" aria-labelledby="bookingModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="bookingModalLabel">
+            <i class="bi bi-calendar-plus me-2" style="color:var(--trek-primary);"></i>
+            Book Expedition
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body" v-if="selectedExpeditionForBooking">
+
+          <!-- Step 1: Confirm Details -->
+          <div v-if="bookingStep === 1">
+            <div class="p-3 mb-3" style="background:rgba(76,175,80,0.06);border-radius:12px;border:1px solid rgba(76,175,80,0.12);">
+              <h6 style="font-weight:700;color:var(--trek-text-primary);">{{ selectedExpeditionForBooking.expedition_route_name }}</h6>
+              <div class="row g-2 mt-1" style="font-size:0.82rem;color:var(--trek-text-muted);">
+                <div class="col-6"><i class="bi bi-geo-alt me-1"></i>{{ selectedExpeditionForBooking.expedition_geographical_location }}</div>
+                <div class="col-6"><i class="bi bi-calendar me-1"></i>{{ formatDate(selectedExpeditionForBooking.expedition_scheduled_start_date) }}</div>
+                <div class="col-6"><i class="bi bi-speedometer me-1"></i>{{ selectedExpeditionForBooking.expedition_difficulty_level }}</div>
+                <div class="col-6"><i class="bi bi-clock me-1"></i>{{ selectedExpeditionForBooking.expedition_duration_in_days }} days</div>
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Number of Participants</label>
+              <div class="d-flex align-items-center gap-3">
+                <button type="button" class="btn btn-trek-outline btn-sm" @click="bookingParticipants = Math.max(1, bookingParticipants - 1)">−</button>
+                <span style="font-size:1.2rem;font-weight:700;color:var(--trek-text-primary);min-width:30px;text-align:center;">{{ bookingParticipants }}</span>
+                <button type="button" class="btn btn-trek-outline btn-sm"
+                  @click="bookingParticipants = Math.min(Math.min(10, selectedExpeditionForBooking.available_participant_slots_remaining), bookingParticipants + 1)">+</button>
+                <span style="font-size:0.78rem;color:var(--trek-text-muted);">(Max: {{ Math.min(10, selectedExpeditionForBooking.available_participant_slots_remaining) }})</span>
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Special Requirements <span style="color:var(--trek-text-muted);font-weight:400;">(optional)</span></label>
+              <textarea class="form-control" rows="2" v-model="bookingSpecialNote"
+                placeholder="Dietary restrictions, accessibility needs..."></textarea>
+            </div>
+
+            <div class="p-3 mb-1" style="background:rgba(255,213,79,0.07);border-radius:10px;border:1px solid rgba(255,213,79,0.2);">
+              <div class="d-flex justify-content-between">
+                <span style="font-size:0.9rem;color:var(--trek-text-muted);">Price per person</span>
+                <span style="font-weight:700;color:var(--trek-text-primary);">₹{{ selectedExpeditionForBooking.expedition_price_per_person_inr?.toLocaleString() }}</span>
+              </div>
+              <div class="d-flex justify-content-between mt-1">
+                <span style="font-size:0.9rem;color:var(--trek-text-muted);">× {{ bookingParticipants }} participant(s)</span>
+                <span style="font-weight:800;font-size:1.1rem;" class="text-trek-accent">
+                  ₹{{ (selectedExpeditionForBooking.expedition_price_per_person_inr * bookingParticipants).toLocaleString() }}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 2: Payment Simulation -->
+          <div v-if="bookingStep === 2">
+            <div class="payment-card-preview mb-4">
+              <div class="d-flex justify-content-between align-items-start mb-3">
+                <div class="payment-card-chip">💳</div>
+                <div style="font-size:0.7rem;color:rgba(200,230,201,0.6);letter-spacing:1px;">SIMULATED</div>
+              </div>
+              <div class="payment-card-number mb-2">•••• •••• •••• 4242</div>
+              <div style="font-size:0.75rem;color:rgba(200,230,201,0.7);">TREKKER / SIMULATION MODE</div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Card Number (Simulated)</label>
+              <input type="text" class="form-control" value="4242 4242 4242 4242" readonly />
+            </div>
+            <div class="row g-2 mb-3">
+              <div class="col-6">
+                <label class="form-label">Expiry</label>
+                <input type="text" class="form-control" value="12/27" readonly />
+              </div>
+              <div class="col-6">
+                <label class="form-label">CVV</label>
+                <input type="text" class="form-control" value="•••" readonly />
+              </div>
+            </div>
+            <div class="alert py-2" style="background:rgba(41,182,246,0.08);border-color:rgba(41,182,246,0.2);color:#29b6f6;border-radius:8px;font-size:0.82rem;">
+              <i class="bi bi-info-circle me-2"></i>
+              This is a simulated payment. No real transaction occurs.
+              Total: <strong>₹{{ (selectedExpeditionForBooking.expedition_price_per_person_inr * bookingParticipants).toLocaleString() }}</strong>
+            </div>
+          </div>
+
+          <!-- Step 3: Processing Animation -->
+          <div v-if="bookingStep === 3" class="text-center py-4">
+            <div class="trek-spinner mx-auto mb-3"></div>
+            <p style="color:var(--trek-text-muted);">Processing your booking...</p>
+          </div>
+
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-trek-outline" data-bs-dismiss="modal" v-if="bookingStep < 3">Cancel</button>
+          <button v-if="bookingStep === 1 && selectedExpeditionForBooking?.expedition_price_per_person_inr > 0"
+            class="btn btn-trek-primary" @click="bookingStep = 2">
+            <i class="bi bi-credit-card me-2"></i>Proceed to Payment
+          </button>
+          <button v-else-if="bookingStep === 1"
+            class="btn btn-trek-primary" @click="handleConfirmBooking">
+            <i class="bi bi-check-circle me-2"></i>Confirm Booking
+          </button>
+          <button v-if="bookingStep === 2" class="btn btn-trek-primary" @click="handleConfirmBooking">
+            <i class="bi bi-lock me-2"></i>Pay & Confirm
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CANCEL BOOKING MODAL -->
+  <div class="modal fade" id="cancelBookingModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title"><i class="bi bi-x-circle me-2" style="color:var(--trek-danger);"></i>Cancel Booking</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body" v-if="selectedBookingForCancellation">
+          <p style="font-size:0.9rem;color:var(--trek-text-secondary);">
+            Cancel booking for <strong>{{ selectedBookingForCancellation.expedition_route_name }}</strong>?
+          </p>
+          <div class="mb-3">
+            <label class="form-label">Reason <span style="color:var(--trek-text-muted);font-weight:400;">(optional)</span></label>
+            <textarea class="form-control" rows="2" v-model="cancellationReason" placeholder="Why are you cancelling?"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-trek-outline" data-bs-dismiss="modal">Keep Booking</button>
+          <button class="btn btn-trek-danger" @click="handleConfirmCancellation" :disabled="cancellationSubmitting">
+            <span v-if="cancellationSubmitting"><span class="spinner-border spinner-border-sm me-2"></span></span>
+            <i v-else class="bi bi-x-circle me-1"></i>Cancel Booking
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADMIN EDIT EXPEDITION MODAL -->
+  <div class="modal fade" id="adminEditExpeditionModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title"><i class="bi bi-pencil-square me-2" style="color:var(--trek-primary);"></i>Edit Expedition</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body" v-if="adminEditingExpedition">
+          <div class="row g-3">
+            <div class="col-md-8">
+              <label class="form-label">Expedition Name</label>
+              <input type="text" class="form-control" v-model="adminEditingExpedition.expedition_route_name" />
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Status</label>
+              <select class="form-select" v-model="adminEditingExpedition.current_expedition_lifecycle_status">
+                <option v-for="s in expeditionStatuses" :key="s" :value="s">{{ s }}</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Location</label>
+              <input type="text" class="form-control" v-model="adminEditingExpedition.expedition_geographical_location" />
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Difficulty</label>
+              <select class="form-select" v-model="adminEditingExpedition.expedition_difficulty_level">
+                <option value="Easy">Easy</option>
+                <option value="Moderate">Moderate</option>
+                <option value="Hard">Hard</option>
+              </select>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Duration (Days)</label>
+              <input type="number" class="form-control" v-model.number="adminEditingExpedition.expedition_duration_in_days" min="1" />
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Price per Person (₹)</label>
+              <input type="number" class="form-control" v-model.number="adminEditingExpedition.expedition_price_per_person_inr" min="0" />
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Total Capacity</label>
+              <input type="number" class="form-control" v-model.number="adminEditingExpedition.total_participant_slots_capacity" min="1" />
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Assign Staff</label>
+              <select class="form-select" v-model="adminEditingExpedition.assigned_staff_leader_id">
+                <option :value="null">Unassigned</option>
+                <option v-for="staff in allStaffAccounts" :key="staff.user_account_id" :value="staff.user_account_id">{{ staff.user_full_name }}</option>
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Start Date</label>
+              <input type="date" class="form-control" v-model="adminEditingExpedition.expedition_scheduled_start_date" />
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">End Date</label>
+              <input type="date" class="form-control" v-model="adminEditingExpedition.expedition_scheduled_end_date" />
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Booking Cutoff</label>
+              <input type="date" class="form-control" v-model="adminEditingExpedition.expedition_booking_cutoff_date" />
+            </div>
+            <div class="col-12">
+              <label class="form-label">Meeting Point</label>
+              <input type="text" class="form-control" v-model="adminEditingExpedition.expedition_meeting_point_address" />
+            </div>
+            <div class="col-12">
+              <label class="form-label">Cover Image URL</label>
+              <input type="url" class="form-control" v-model="adminEditingExpedition.expedition_cover_image_url" />
+            </div>
+            <div class="col-12">
+              <label class="form-label">Description</label>
+              <textarea class="form-control" rows="3" v-model="adminEditingExpedition.expedition_detailed_description"></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-trek-outline" data-bs-dismiss="modal">Cancel</button>
+          <button class="btn btn-trek-primary" @click="handleUpdateExpedition" :disabled="editExpeditionSubmitting">
+            <span v-if="editExpeditionSubmitting"><span class="spinner-border spinner-border-sm me-2"></span></span>
+            <i v-else class="bi bi-check-lg me-1"></i>Save Changes
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STAFF: MANAGE EXPEDITION MODAL -->
+  <div class="modal fade" id="staffManageModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title"><i class="bi bi-gear me-2" style="color:var(--trek-primary);"></i>Manage Expedition</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body" v-if="staffManagingExpedition">
+          <h6 style="font-weight:700;color:var(--trek-text-primary);margin-bottom:0.25rem;">{{ staffManagingExpedition.expedition_route_name }}</h6>
+          <div style="font-size:0.82rem;color:var(--trek-text-muted);margin-bottom:1.5rem;">{{ staffManagingExpedition.expedition_geographical_location }}</div>
+          <div class="mb-3">
+            <label class="form-label">Update Status</label>
+            <select class="form-select" v-model="staffUpdatePayload.current_expedition_lifecycle_status">
+              <option :value="null">— No change —</option>
+              <option value="Open">Open (accepting bookings)</option>
+              <option value="Closed">Closed (no new bookings)</option>
+              <option value="Completed">Completed (trek finished)</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Available Slots Override</label>
+            <input type="number" class="form-control"
+              v-model.number="staffUpdatePayload.available_participant_slots_remaining"
+              :max="staffManagingExpedition.total_participant_slots_capacity"
+              min="0"
+              placeholder="Leave empty to keep current" />
+            <div style="font-size:0.75rem;color:var(--trek-text-muted);margin-top:4px;">
+              Current: {{ staffManagingExpedition.available_participant_slots_remaining }} / {{ staffManagingExpedition.total_participant_slots_capacity }}
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-trek-outline" data-bs-dismiss="modal">Cancel</button>
+          <button class="btn btn-trek-primary" @click="handleStaffExpeditionUpdate" :disabled="staffUpdateSubmitting">
+            <span v-if="staffUpdateSubmitting"><span class="spinner-border spinner-border-sm me-2"></span>Updating...</span>
+            <span v-else><i class="bi bi-check-lg me-1"></i>Apply Changes</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STAFF / ADMIN PARTICIPANTS MODAL -->
+  <div class="modal fade" id="participantsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title"><i class="bi bi-people me-2" style="color:var(--trek-primary);"></i>Participant Roster</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div v-if="participantsLoading" class="text-center py-4">
+            <div class="trek-spinner mx-auto"></div>
+          </div>
+          <div v-else>
+            <div v-if="expeditionParticipants.length === 0" class="empty-state py-3">
+              <div class="empty-state-icon" style="font-size:2rem;">👥</div>
+              <p style="font-size:0.88rem;">No confirmed participants yet.</p>
+            </div>
+            <div v-for="(p, idx) in expeditionParticipants" :key="p.participant_booking_record_id"
+              class="d-flex align-items-center gap-3 mb-2 p-2"
+              style="background:rgba(76,175,80,0.05);border-radius:8px;border:1px solid rgba(76,175,80,0.08);">
+              <div style="font-weight:700;color:var(--trek-text-muted);min-width:24px;font-size:0.82rem;">{{ idx + 1 }}</div>
+              <div class="avatar-circle" style="width:36px;height:36px;font-size:0.78rem;flex-shrink:0;">
+                {{ p.booking_owner_trekker?.user_full_name?.slice(0,2)?.toUpperCase() || 'TK' }}
+              </div>
+              <div class="flex-fill">
+                <div style="font-weight:600;font-size:0.88rem;color:var(--trek-text-primary);">Booking Ref: {{ p.booking_confirmation_reference_code }}</div>
+                <div style="font-size:0.75rem;color:var(--trek-text-muted);">{{ p.trekker_special_requirements_note || 'No special requirements' }}</div>
+              </div>
+              <span class="trek-badge" :class="bookingBadgeClass(p.current_booking_lifecycle_status)">
+                {{ p.current_booking_lifecycle_status }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DELETE CONFIRM MODAL -->
+  <div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" style="color:var(--trek-danger);">
+            <i class="bi bi-exclamation-triangle me-2"></i>Confirm Delete
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <p style="font-size:0.9rem;color:var(--trek-text-secondary);">
+            Permanently delete <strong>{{ expeditionToDelete?.expedition_route_name }}</strong>?
+            This cannot be undone.
+          </p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-trek-outline" data-bs-dismiss="modal">Cancel</button>
+          <button class="btn btn-trek-danger" @click="handleDeleteExpedition" :disabled="deleteSubmitting">
+            <span v-if="deleteSubmitting"><span class="spinner-border spinner-border-sm me-2"></span></span>
+            <i v-else class="bi bi-trash me-1"></i>Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /#trek-app -->
+
+<!-- ================================================================
+     SCRIPTS
+================================================================ -->
+<!-- Bootstrap 5 JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<!-- Vue 3 CDN -->
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<!-- Application JS -->
+<script src="/frontend/app.js"></script>
+<!-- PWA Service Worker Registration -->
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/frontend/sw.js')
+        .then(reg => console.log('[SW] Registered:', reg.scope))
+        .catch(err => console.log('[SW] Registration failed:', err));
+    });
+  }
+</script>
+</body>
+</html>
