@@ -638,21 +638,27 @@ createApp({
     async loadAdminDashboard() {
       const { data, ok } = await this.callTrekPlatformApi('/admin/dashboard/metrics');
       if (ok && data) {
+        const metrics = data.admin_dashboard_metrics || data;
+        const totalExpeditions = metrics.total_expeditions_on_platform !== undefined ? metrics.total_expeditions_on_platform : (metrics.total_expedition_routes || 0);
+        const totalStaff = metrics.total_staff_accounts !== undefined ? metrics.total_staff_accounts : (metrics.total_registered_staff_members || 0);
+        const totalBookings = metrics.active_participant_bookings !== undefined ? metrics.active_participant_bookings : (metrics.total_platform_wide_bookings || 0);
+        const totalTrekkers = metrics.total_registered_trekkers !== undefined ? metrics.total_registered_trekkers : 0;
+
         this.adminDashboardMetrics = [
-          { key: 'treks', label: 'Total Expeditions', value: data.total_expedition_routes, icon: 'bi bi-map-fill', iconBg: 'metric-icon-green' },
-          { key: 'users', label: 'Registered Users',  value: data.total_registered_trekkers, icon: 'bi bi-people-fill', iconBg: 'metric-icon-gold' },
-          { key: 'staff', label: 'Trek Staff',         value: data.total_registered_staff_members, icon: 'bi bi-person-badge-fill', iconBg: 'metric-icon-blue' },
-          { key: 'bookings', label: 'Total Bookings',  value: data.total_platform_wide_bookings, icon: 'bi bi-calendar-check-fill', iconBg: 'metric-icon-red' },
+          { key: 'treks', label: 'Total Expeditions', value: totalExpeditions, icon: 'bi bi-map-fill', iconBg: 'metric-icon-green' },
+          { key: 'users', label: 'Registered Users',  value: totalTrekkers, icon: 'bi bi-people-fill', iconBg: 'metric-icon-gold' },
+          { key: 'staff', label: 'Trek Staff',         value: totalStaff, icon: 'bi bi-person-badge-fill', iconBg: 'metric-icon-blue' },
+          { key: 'bookings', label: 'Total Bookings',  value: totalBookings, icon: 'bi bi-calendar-check-fill', iconBg: 'metric-icon-red' },
         ];
 
         // Render donut and bar charts on the next tick after DOM updates.
-        this.$nextTick(() => this.renderAdminDashboardCharts(data));
+        this.$nextTick(() => this.renderAdminDashboardCharts(metrics));
       }
 
       // Load recent 5 expeditions for the mini-table.
       const exp_response = await this.callTrekPlatformApi('/admin/expeditions?page=1&per_page=5');
-      if (exp_response.ok) {
-        this.adminRecentExpeditions = exp_response.data?.expedition_list || [];
+      if (exp_response.ok && exp_response.data) {
+        this.adminRecentExpeditions = exp_response.data.expeditions || exp_response.data.expedition_list || [];
       }
     },
 
@@ -662,29 +668,29 @@ createApp({
         page: this.adminExpeditionsPage,
         per_page: 15,
       });
-      if (this.adminExpeditionsStatusFilter) params.append('status', this.adminExpeditionsStatusFilter);
+      if (this.adminExpeditionsStatusFilter) params.append('status_filter', this.adminExpeditionsStatusFilter);
 
       const { data, ok } = await this.callTrekPlatformApi(`/admin/expeditions?${params}`);
       if (ok && data) {
-        this.adminAllExpeditions = data.expedition_list || [];
-        this.adminExpeditionsPagination = data.pagination_metadata || {};
+        this.adminAllExpeditions = data.expeditions || data.expedition_list || [];
+        this.adminExpeditionsPagination = data.pagination || data.pagination_metadata || {};
       }
     },
 
     /** loadAdminUsers — Loads all user accounts for admin management view. */
     async loadAdminUsers() {
       const params = new URLSearchParams();
-      if (this.userSearchKeyword.trim()) params.append('keyword', this.userSearchKeyword);
-      if (this.userRoleFilter) params.append('role', this.userRoleFilter);
+      if (this.userSearchKeyword.trim()) params.append('search_keyword', this.userSearchKeyword);
+      if (this.userRoleFilter) params.append('role_filter', this.userRoleFilter);
 
       const { data, ok } = await this.callTrekPlatformApi(`/admin/users?${params}`);
-      if (ok && data) this.adminAllUsers = data.user_accounts_list || [];
+      if (ok && data) this.adminAllUsers = data.platform_users || data.user_accounts_list || [];
     },
 
     /** loadAllStaffForDropdown — Fetches staff list for expedition assignment dropdowns. */
     async loadAllStaffForDropdown() {
-      const { data, ok } = await this.callTrekPlatformApi('/admin/users?role=Staff&per_page=100');
-      if (ok && data) this.allStaffAccounts = data.user_accounts_list || [];
+      const { data, ok } = await this.callTrekPlatformApi('/admin/users?role_filter=Staff&per_page=100');
+      if (ok && data) this.allStaffAccounts = data.platform_users || data.user_accounts_list || [];
     },
 
     /** debouncedUserSearch — Debounces the user search input to avoid excessive API calls. */
@@ -1055,19 +1061,41 @@ createApp({
     async loadStaffDashboard() {
       const { data, ok } = await this.callTrekPlatformApi('/staff/dashboard/summary');
       if (ok && data) {
-        this.staffDashboardSummary = data;
-        this.staffOpenExpeditions = (data.all_assigned_expeditions || []).filter(
-          e => e.current_expedition_lifecycle_status === 'Open'
-        );
+        const summary = data.staff_dashboard_summary || data;
+        const counts = summary.assigned_expedition_counts_by_status || {};
+        const totalAssigned = Object.values(counts).reduce((a, b) => a + b, 0);
+
+        this.staffDashboardSummary = {
+          total_assigned_expeditions: summary.total_assigned_expeditions !== undefined ? summary.total_assigned_expeditions : totalAssigned,
+          total_participants_across_assignments: summary.total_participants_across_assignments !== undefined ? summary.total_participants_across_assignments : (summary.total_active_participants_under_management || 0),
+          open_expeditions_count: summary.open_expeditions_count !== undefined ? summary.open_expeditions_count : (counts['Open'] || 0),
+          completed_expeditions_count: summary.completed_expeditions_count !== undefined ? summary.completed_expeditions_count : (counts['Completed'] || 0),
+        };
+
+        if (summary.all_assigned_expeditions) {
+          this.staffOpenExpeditions = summary.all_assigned_expeditions.filter(
+            e => e.current_expedition_lifecycle_status === 'Open'
+          );
+        } else {
+          const exp_res = await this.callTrekPlatformApi('/staff/assigned-expeditions');
+          if (exp_res.ok && exp_res.data) {
+            const list = exp_res.data.assigned_expeditions || exp_res.data.assigned_expedition_routes_list || [];
+            this.staffOpenExpeditions = list.filter(
+              e => e.current_expedition_lifecycle_status === 'Open'
+            );
+          }
+        }
       }
     },
 
     /** loadStaffAssignedExpeditions — Full list view of staff's assigned expeditions. */
     async loadStaffAssignedExpeditions() {
       const params = new URLSearchParams();
-      if (this.staffExpeditionsFilter) params.append('status', this.staffExpeditionsFilter);
+      if (this.staffExpeditionsFilter) params.append('status_filter', this.staffExpeditionsFilter);
       const { data, ok } = await this.callTrekPlatformApi(`/staff/assigned-expeditions?${params}`);
-      if (ok && data) this.staffAllAssignedExpeditions = data.assigned_expedition_routes_list || [];
+      if (ok && data) {
+        this.staffAllAssignedExpeditions = data.assigned_expeditions || data.assigned_expedition_routes_list || [];
+      }
     },
 
     /** openStaffExpeditionManageModal — Opens the staff manage modal for an expedition. */
@@ -1178,7 +1206,9 @@ createApp({
       const params = new URLSearchParams();
       if (this.bookingStatusFilter) params.append('status_filter', this.bookingStatusFilter);
       const { data, ok } = await this.callTrekPlatformApi(`/trekker/bookings?${params}`);
-      if (ok && data) this.trekkerAllBookings = data.booking_history_records || [];
+      if (ok && data) {
+        this.trekkerAllBookings = data.booking_history || data.booking_history_records || [];
+      }
     },
 
     /** openBookingModal — Prepares and opens the booking confirmation modal. */
