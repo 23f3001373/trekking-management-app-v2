@@ -14,6 +14,11 @@ Why a class-based config instead of a flat .env file?
 
 import os
 from datetime import timedelta
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
+
 
 
 class BaseApplicationConfig:
@@ -32,6 +37,21 @@ class BaseApplicationConfig:
     # Secret key for session signing and CSRF protection.
     # In production this MUST come from an environment variable, never hardcoded.
     SECRET_KEY: str = os.environ.get("FLASK_SECRET_KEY", "trek-app-v2-dev-secret-change-in-prod")
+
+    # Allowed CORS origins for development/preview servers
+    ALLOWED_CORS_ORIGINS: list = [
+        origin.strip() for origin in os.environ.get("ALLOWED_CORS_ORIGINS", "").split(",") if origin.strip()
+    ] or [
+        "http://localhost:5173",
+        "http://127.0.0.1:5500",
+        "http://localhost:8080",
+        "http://127.0.0.1:8080",
+        "http://localhost:8081",
+        "http://127.0.0.1:8081",
+        "http://127.0.0.1:5501",
+        "http://localhost:5501"
+    ]
+
 
     # ------------------------------------------------------------------ #
     # Database — SQLite via SQLAlchemy                                     #
@@ -71,7 +91,7 @@ class BaseApplicationConfig:
     # Redis — shared between Flask-Caching and Celery                     #
     # ------------------------------------------------------------------ #
 
-    REDIS_URL: str = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
+    REDIS_URL: str = os.environ.get("REDIS_URL", "redis://127.0.0.1:6379/0")
 
     # ------------------------------------------------------------------ #
     # Flask-Caching (Redis backend)                                        #

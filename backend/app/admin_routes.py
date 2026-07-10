@@ -120,20 +120,24 @@ def _invalidate_open_treks_redis_cache() -> None:
         cache_key_prefix = current_app.config.get(
             "CACHE_KEY_PREFIX_OPEN_TREKS", "trek_platform:open_treks:"
         )
-        # Flask-Caching with Redis backend exposes the underlying Redis client.
-        # We use SCAN+DELETE to remove all keys matching our prefix pattern.
-        redis_client = cache.cache._write_client
-        matching_cache_keys = redis_client.keys(f"{cache_key_prefix}*")
-        if matching_cache_keys:
-            redis_client.delete(*matching_cache_keys)
-            current_app.logger.debug(
-                f"Invalidated {len(matching_cache_keys)} open-treks cache entries."
-            )
+        cache_type = current_app.config.get("CACHE_TYPE")
+        if cache_type == "RedisCache":
+            redis_client = getattr(cache.cache, "_write_client", None) or getattr(cache.cache, "_client", None)
+            if redis_client:
+                matching_cache_keys = redis_client.keys(f"{cache_key_prefix}*")
+                if matching_cache_keys:
+                    redis_client.delete(*matching_cache_keys)
+                    current_app.logger.debug(
+                        f"Invalidated {len(matching_cache_keys)} open-treks cache entries from Redis."
+                    )
+        else:
+            # Fallback for simple/in-memory cache (e.g. SimpleCache in testing)
+            cache.clear()
+            current_app.logger.debug("Cleared testing/fallback cache.")
     except Exception as cache_invalidation_exception:
-        # Cache invalidation failure is non-fatal — the next read will simply
-        # return slightly stale data until the TTL expires. Log it but don't crash.
+        # Cache invalidation failure is non-fatal — log it but don't crash the request.
         current_app.logger.warning(
-            f"Redis cache invalidation failed (non-fatal): {cache_invalidation_exception}"
+            f"Cache invalidation failed (non-fatal): {cache_invalidation_exception}"
         )
 
 

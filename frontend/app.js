@@ -44,7 +44,7 @@ const { createApp } = Vue;
 // =============================================================================
 
 /** Base URL of the Flask API server. Change this for production. */
-const TREK_PLATFORM_API_BASE_URL = 'http://localhost:5000/api';
+const TREK_PLATFORM_API_BASE_URL = 'http://127.0.0.1:5000/api';
 
 /** LocalStorage key for the JWT refresh token (access token stays in memory). */
 const REFRESH_TOKEN_STORAGE_KEY = 'trek_platform_refresh_token_v2';
@@ -440,11 +440,11 @@ createApp({
         if (data.refresh_token) {
           localStorage.setItem(REFRESH_TOKEN_STORAGE_KEY, data.refresh_token);
         }
-        this.authenticatedUserSession = data.authenticated_user_profile;
+        this.authenticatedUserSession = data.authenticated_user;
         this.loginFormData = { user_email_address: '', submitted_password: '' };
-        this.navigateToDefaultViewForRole(data.authenticated_user_profile.assigned_platform_role);
+        this.navigateToDefaultViewForRole(data.authenticated_user.assigned_platform_role);
         await this.loadInitialDataForRole();
-        this.showToast('success', 'Welcome back!', `Logged in as ${data.authenticated_user_profile.user_full_name}`);
+        this.showToast('success', 'Welcome back!', `Logged in as ${data.authenticated_user.user_full_name}`);
       } else {
         this.loginApiError = data?.error_detail?.message || data?.message || 'Invalid credentials.';
       }
@@ -541,9 +541,9 @@ createApp({
         this.inMemoryAccessToken = data.new_access_token;
         // Now fetch the current user profile.
         const profile_response = await this.callTrekPlatformApi('/auth/me', 'GET');
-        if (profile_response.ok && profile_response.data) {
-          this.authenticatedUserSession = profile_response.data;
-          this.navigateToDefaultViewForRole(profile_response.data.assigned_platform_role);
+        if (profile_response.ok && profile_response.data?.current_user_profile) {
+          this.authenticatedUserSession = profile_response.data.current_user_profile;
+          this.navigateToDefaultViewForRole(profile_response.data.current_user_profile.assigned_platform_role);
           await this.loadInitialDataForRole();
         } else {
           this.inMemoryAccessToken = null;
@@ -636,7 +636,7 @@ createApp({
 
     /** loadAdminDashboard — Fetches dashboard metric cards and recent expeditions. */
     async loadAdminDashboard() {
-      const { data, ok } = await this.callTrekPlatformApi('/admin/dashboard-metrics');
+      const { data, ok } = await this.callTrekPlatformApi('/admin/dashboard/metrics');
       if (ok && data) {
         this.adminDashboardMetrics = [
           { key: 'treks', label: 'Total Expeditions', value: data.total_expedition_routes, icon: 'bi bi-map-fill', iconBg: 'metric-icon-green' },
@@ -777,7 +777,7 @@ createApp({
 
       const expedition_id = this.adminEditingExpedition.trekking_route_expedition_id;
       const { data, ok } = await this.callTrekPlatformApi(
-        `/admin/expeditions/${expedition_id}`, 'PUT', this.adminEditingExpedition
+        `/admin/expeditions/${expedition_id}`, 'PATCH', this.adminEditingExpedition
       );
       this.editExpeditionSubmitting = false;
 
@@ -844,8 +844,7 @@ createApp({
 
     /** toggleUserBlacklist — Toggles the blacklist status of a user account. */
     async toggleUserBlacklist(user) {
-      const action = user.is_account_blacklisted ? 'unblacklist' : 'blacklist';
-      const { ok } = await this.callTrekPlatformApi(`/admin/users/${user.user_account_id}/${action}`, 'PATCH');
+      const { ok } = await this.callTrekPlatformApi(`/admin/users/${user.user_account_id}/blacklist`, 'PATCH');
       if (ok) {
         user.is_account_blacklisted = !user.is_account_blacklisted;
         this.showToast('info', 'Status Updated', `${user.user_full_name}'s account has been ${action}ed.`);
@@ -906,7 +905,7 @@ createApp({
 
     /** loadAdminAnalyticsCharts — Fetches analytics data and renders all analytics charts. */
     async loadAdminAnalyticsCharts() {
-      const { data, ok } = await this.callTrekPlatformApi('/admin/dashboard-metrics');
+      const { data, ok } = await this.callTrekPlatformApi('/admin/dashboard/metrics');
       if (!ok || !data) return;
 
       await this.$nextTick();
@@ -1054,7 +1053,7 @@ createApp({
 
     /** loadStaffDashboard — Loads summary metrics and open treks for staff. */
     async loadStaffDashboard() {
-      const { data, ok } = await this.callTrekPlatformApi('/staff/my-dashboard-summary');
+      const { data, ok } = await this.callTrekPlatformApi('/staff/dashboard/summary');
       if (ok && data) {
         this.staffDashboardSummary = data;
         this.staffOpenExpeditions = (data.all_assigned_expeditions || []).filter(
@@ -1067,7 +1066,7 @@ createApp({
     async loadStaffAssignedExpeditions() {
       const params = new URLSearchParams();
       if (this.staffExpeditionsFilter) params.append('status', this.staffExpeditionsFilter);
-      const { data, ok } = await this.callTrekPlatformApi(`/staff/my-assigned-expeditions?${params}`);
+      const { data, ok } = await this.callTrekPlatformApi(`/staff/assigned-expeditions?${params}`);
       if (ok && data) this.staffAllAssignedExpeditions = data.assigned_expedition_routes_list || [];
     },
 
@@ -1096,7 +1095,7 @@ createApp({
       }
 
       const exp_id = this.staffManagingExpedition.trekking_route_expedition_id;
-      const { ok } = await this.callTrekPlatformApi(`/staff/expedition/${exp_id}/update-operational-details`, 'PATCH', update_payload);
+      const { ok } = await this.callTrekPlatformApi(`/staff/assigned-expeditions/${exp_id}/operational-update`, 'PATCH', update_payload);
       this.staffUpdateSubmitting = false;
 
       if (ok) {
@@ -1116,7 +1115,7 @@ createApp({
       this.participantsModalInstance.show();
 
       const { data, ok } = await this.callTrekPlatformApi(
-        `/staff/expedition/${expedition.trekking_route_expedition_id}/participants`
+        `/staff/assigned-expeditions/${expedition.trekking_route_expedition_id}/participants`
       );
       this.participantsLoading = false;
       if (ok && data) this.expeditionParticipants = data.participant_booking_records_list || [];
@@ -1178,7 +1177,7 @@ createApp({
     async loadTrekkerBookings() {
       const params = new URLSearchParams();
       if (this.bookingStatusFilter) params.append('status_filter', this.bookingStatusFilter);
-      const { data, ok } = await this.callTrekPlatformApi(`/trekker/my-booking-history?${params}`);
+      const { data, ok } = await this.callTrekPlatformApi(`/trekker/bookings?${params}`);
       if (ok && data) this.trekkerAllBookings = data.booking_history_records || [];
     },
 
@@ -1200,12 +1199,13 @@ createApp({
       this.bookingStep = 3;  // Show processing animation.
 
       const { data, ok } = await this.callTrekPlatformApi(
-        `/trekker/expeditions/${this.selectedExpeditionForBooking.trekking_route_expedition_id}/book`,
+        '/trekker/bookings',
         'POST',
         {
+          booked_expedition_instance_id: this.selectedExpeditionForBooking.trekking_route_expedition_id,
           number_of_participants_in_booking: this.bookingParticipants,
           trekker_special_requirements_note: this.bookingSpecialNote || null,
-          simulated_payment_completed: true,  // Always true for simulation.
+          simulated_payment_completed: true,
         }
       );
 

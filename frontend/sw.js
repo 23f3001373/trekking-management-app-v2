@@ -27,16 +27,16 @@
  *     on the next activation, ensuring users always get fresh static assets.
  */
 
-const TREK_CACHE_VERSION = 'trekking-app-v2-cache-v1';
+const TREK_CACHE_VERSION = 'trekking-app-v2-cache-v2';
 
 /**
  * Static assets to pre-cache on Service Worker installation.
  * These are the core resources needed for the app shell to load offline.
  */
 const TREK_PRECACHE_ASSET_URLS = [
-  '/frontend/index.html',
-  '/frontend/app.js',
-  '/frontend/manifest.json',
+  'index.html',
+  'app.js',
+  'manifest.json',
   // CDN resources
   'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css',
   'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js',
@@ -74,39 +74,6 @@ self.addEventListener('activate', (activate_event) => {
   );
 });
 
-// ---- FETCH EVENT: Cache-First strategy for static assets ----
-self.addEventListener('fetch', (fetch_event) => {
-  const request_url = new URL(fetch_event.request.url);
+// ---- FETCH EVENT: Disabled for development to prevent caching issues ----
+// self.addEventListener('fetch', (fetch_event) => { ... });
 
-  // CRITICAL: Never intercept API calls — always let them go to network.
-  if (request_url.pathname.startsWith('/api/')) {
-    return;  // Fall through to browser's default network handling.
-  }
-
-  // For all other requests, use Cache-First strategy.
-  fetch_event.respondWith(
-    caches.match(fetch_event.request).then((cached_response) => {
-      if (cached_response) {
-        // Serve from cache immediately.
-        return cached_response;
-      }
-
-      // Not in cache — fetch from network.
-      return fetch(fetch_event.request).then((network_response) => {
-        // Cache successful GET responses.
-        if (network_response && network_response.ok && fetch_event.request.method === 'GET') {
-          const response_clone = network_response.clone();
-          caches.open(TREK_CACHE_VERSION).then((cache) => {
-            cache.put(fetch_event.request, response_clone);
-          });
-        }
-        return network_response;
-      }).catch(() => {
-        // Network failed and not cached — serve offline fallback for HTML requests.
-        if (fetch_event.request.destination === 'document') {
-          return caches.match('/frontend/index.html');
-        }
-      });
-    })
-  );
-});
