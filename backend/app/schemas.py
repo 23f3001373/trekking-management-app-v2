@@ -127,6 +127,7 @@ class TrekkerSelfRegistrationRequestSchema(Schema):
     )
 
 
+
 class UserLoginRequestSchema(Schema):
     """
     Validates the JSON body for the login endpoint (POST /api/auth/login).

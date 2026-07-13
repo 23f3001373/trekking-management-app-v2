@@ -131,13 +131,38 @@ def _send_smtp_email_notification(
         "sender": current_app.config.get("MAIL_DEFAULT_SENDER", "noreply@trekkingplatform.com"),
     }
 
-    # If SMTP credentials are not configured (dev environment), log and skip.
-    if not mail_config["username"] or not mail_config["password"]:
-        current_app.logger.warning(
-            f"[MAIL SKIPPED] SMTP not configured. Would have sent '{email_subject_line}' "
-            f"to {recipient_email_address}"
-        )
-        return True  # Return True so the task doesn't fail in dev environments.
+    # If SMTP credentials are not configured (dev environment) or placeholder values used, log and write to local file.
+    is_placeholder = (
+        not mail_config["username"] or 
+        not mail_config["password"] or 
+        "your-gmail" in mail_config["username"] or 
+        "example" in mail_config["username"]
+    )
+    if is_placeholder:
+        try:
+            sent_emails_dir = os.path.abspath(os.path.join(current_app.root_path, "..", "sent_emails"))
+            os.makedirs(sent_emails_dir, exist_ok=True)
+            
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            safe_subject = "".join([c for c in email_subject_line if c.isalnum() or c in " _-"]).strip()
+            email_filename = f"{timestamp}_{recipient_email_address}_{safe_subject}.html"
+            email_filepath = os.path.join(sent_emails_dir, email_filename)
+            
+            with open(email_filepath, "w", encoding="utf-8") as email_file:
+                email_file.write(email_html_body)
+                
+            if attachment_filename and attachment_bytes_content is not None:
+                attachment_filepath = os.path.join(sent_emails_dir, f"{timestamp}_{attachment_filename}")
+                with open(attachment_filepath, "wb") as attachment_file:
+                    attachment_file.write(attachment_bytes_content)
+                    
+            current_app.logger.warning(
+                f"[MAIL SIMULATED] SMTP not configured. Saved email '{email_subject_line}' "
+                f"to sent_emails/{email_filename}"
+            )
+        except Exception as e:
+            current_app.logger.error(f"Error simulating email save: {e}")
+        return True  # Return True so tasks don't fail in development.
 
     try:
         email_message = MIMEMultipart("mixed")

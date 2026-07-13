@@ -740,7 +740,17 @@ createApp({
       this.expeditionFormSubmitting = true;
       this.expeditionFormApiError = '';
 
-      const { data, ok } = await this.callTrekPlatformApi('/admin/expeditions', 'POST', this.expeditionFormData);
+      const payload = { ...this.expeditionFormData };
+      if (!payload.expedition_cover_image_url || payload.expedition_cover_image_url.trim() === '') {
+        payload.expedition_cover_image_url = null;
+      }
+      if (payload.assigned_staff_leader_id === '' || payload.assigned_staff_leader_id === null) {
+        payload.assigned_staff_leader_id = null;
+      } else {
+        payload.assigned_staff_leader_id = parseInt(payload.assigned_staff_leader_id, 10);
+      }
+
+      const { data, ok } = await this.callTrekPlatformApi('/admin/expeditions', 'POST', payload);
       this.expeditionFormSubmitting = false;
 
       if (ok) {
@@ -781,9 +791,19 @@ createApp({
       if (!this.adminEditingExpedition) return;
       this.editExpeditionSubmitting = true;
 
+      const payload = { ...this.adminEditingExpedition };
+      if (!payload.expedition_cover_image_url || payload.expedition_cover_image_url.trim() === '') {
+        payload.expedition_cover_image_url = null;
+      }
+      if (payload.assigned_staff_leader_id === '' || payload.assigned_staff_leader_id === null) {
+        payload.assigned_staff_leader_id = null;
+      } else {
+        payload.assigned_staff_leader_id = parseInt(payload.assigned_staff_leader_id, 10);
+      }
+
       const expedition_id = this.adminEditingExpedition.trekking_route_expedition_id;
       const { data, ok } = await this.callTrekPlatformApi(
-        `/admin/expeditions/${expedition_id}`, 'PATCH', this.adminEditingExpedition
+        `/admin/expeditions/${expedition_id}`, 'PATCH', payload
       );
       this.editExpeditionSubmitting = false;
 
@@ -853,7 +873,22 @@ createApp({
       const { ok } = await this.callTrekPlatformApi(`/admin/users/${user.user_account_id}/blacklist`, 'PATCH');
       if (ok) {
         user.is_account_blacklisted = !user.is_account_blacklisted;
-        this.showToast('info', 'Status Updated', `${user.user_full_name}'s account has been ${action}ed.`);
+        const action = user.is_account_blacklisted ? 'banned' : 'unbanned';
+        this.showToast('info', 'Status Updated', `${user.user_full_name}'s account has been ${action}.`);
+      }
+    },
+
+    /** deleteUserAccount — Permanently deletes a user account (Trekker or Staff) */
+    async deleteUserAccount(user) {
+      if (!confirm(`Are you sure you want to permanently delete user "${user.user_full_name}" (${user.user_email_address})? All bookings (if Trekker) will be deleted.`)) {
+        return;
+      }
+      const { ok, data } = await this.callTrekPlatformApi(`/admin/users/${user.user_account_id}`, 'DELETE');
+      if (ok) {
+        this.showToast('success', 'User Deleted', `Account for ${user.user_full_name} has been permanently deleted.`);
+        this.loadAdminUsers();
+      } else {
+        this.showToast('danger', 'Deletion Failed', data?.error || 'Failed to delete user.');
       }
     },
 
@@ -1184,8 +1219,8 @@ createApp({
       const { data, ok } = await this.callTrekPlatformApi(`/trekker/expeditions/open?${params}`);
       this.expeditionsLoading = false;
       if (ok && data) {
-        this.trekkerOpenExpeditions = data.open_expedition_listing || [];
-        this.openTreksPagination = data.pagination_metadata || {};
+        this.trekkerOpenExpeditions = data.open_expeditions || [];
+        this.openTreksPagination = data.pagination || {};
       }
     },
 

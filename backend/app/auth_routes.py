@@ -105,7 +105,7 @@ def handle_trekker_self_registration():
             "error_code": "EMAIL_ALREADY_REGISTERED"
         }), 409
 
-    # ---- 3. Construct and persist the new Trekker account ---- #
+    # ---- 3. Construct and persist the new account ---- #
     newly_created_trekker_account = PlatformUserAccount(
         user_full_name=validated_registration_data["user_full_name"].strip(),
         user_email_address=submitted_email,
@@ -124,8 +124,8 @@ def handle_trekker_self_registration():
     db.session.commit()
 
     current_app.logger.info(
-        f"New Trekker account registered: {submitted_email} "
-        f"(id={newly_created_trekker_account.user_account_id})"
+        f"New account registered: {submitted_email} "
+        f"(role=Trekker, id={newly_created_trekker_account.user_account_id})"
     )
 
     return jsonify({

@@ -156,3 +156,7 @@ Thumbs.db
 # Frontend dependency directories
 node_modules/
 dist-frontend/
+
+# Local email testing output
+backend/sent_emails/
+

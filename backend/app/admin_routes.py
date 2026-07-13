@@ -626,6 +626,33 @@ def handle_create_staff_account():
     db.session.add(new_staff_account)
     db.session.commit()
 
+    # Send credentials email to the newly created staff member (per wireframe details).
+    try:
+        from .tasks import _send_smtp_email_notification
+        email_body = f"""
+        <html><body style="font-family: Arial, sans-serif; color: #333;">
+        <div style="max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
+            <h2 style="color: #2E7D32;">🏕️ Welcome to TrekVista — Staff Account Created</h2>
+            <p>Hello <strong>{new_staff_account.user_full_name}</strong>,</p>
+            <p>An administrator has created a Trek Guide / Staff account for you on the TrekVista platform.</p>
+            <p>You can log in to your dashboard using the following credentials:</p>
+            <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
+                <tr><td style="padding: 8px; background: #f5f5f5;"><strong>Login Email</strong></td>
+                    <td style="padding: 8px;">{new_staff_account.user_email_address}</td></tr>
+                <tr><td style="padding: 8px; background: #f5f5f5;"><strong>Temporary Password</strong></td>
+                    <td style="padding: 8px;"><code>{validated_staff_data["raw_password"]}</code></td></tr>
+            </table>
+            <p>Please log in and update your password from your profile settings as soon as possible. 🏔️</p>
+        </div></body></html>
+        """
+        _send_smtp_email_notification(
+            recipient_email_address=new_staff_account.user_email_address,
+            email_subject_line="🎉 Welcome to TrekVista: Your Staff Account is Ready",
+            email_html_body=email_body
+        )
+    except Exception as email_err:
+        current_app.logger.warning(f"Failed to send staff welcome email: {email_err}")
+
     return jsonify({
         "creation_successful": True,
         "message": "Staff account created successfully.",
@@ -677,6 +704,42 @@ def handle_toggle_user_blacklist_status(target_user_account_id: int):
         "message": f"User account has been {action_taken}.",
         "is_account_blacklisted": target_user.is_account_blacklisted,
         "affected_user": target_user.to_safe_public_dict()
+    }), 200
+
+
+@admin_operations_blueprint.route("/users/<int:target_user_account_id>", methods=["DELETE"])
+@jwt_required()
+@require_admin_role
+def handle_delete_user_account(target_user_account_id: int):
+    """
+    Permanently deletes a non-Admin user account (Trekker or Staff).
+    All associated bookings (if Trekker) will cascade delete.
+    Any assigned expeditions (if Staff) will set the guide leader to NULL.
+    """
+    target_user = PlatformUserAccount.query.get(target_user_account_id)
+    if target_user is None:
+        return jsonify({
+            "error": f"No user account found with id={target_user_account_id}.",
+            "error_code": "USER_NOT_FOUND"
+        }), 404
+
+    if target_user.assigned_platform_role == UserPlatformRole.ADMIN:
+        return jsonify({
+            "error": "Admin accounts cannot be deleted.",
+            "error_code": "CANNOT_DELETE_ADMIN"
+        }), 403
+
+    user_email_for_log = target_user.user_email_address
+    db.session.delete(target_user)
+    db.session.commit()
+
+    current_app.logger.warning(
+        f"Admin deleted user account: {user_email_for_log} (id={target_user_account_id})"
+    )
+
+    return jsonify({
+        "deletion_successful": True,
+        "message": f"User account '{user_email_for_log}' has been permanently deleted."
     }), 200
 
 

@@ -529,6 +529,38 @@ def handle_create_new_expedition_booking():
 
     db.session.commit()
 
+    # Send booking confirmation email.
+    try:
+        from .tasks import _send_smtp_email_notification
+        email_body = f"""
+        <html><body style="font-family: Arial, sans-serif; color: #333;">
+        <div style="max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
+            <h2 style="color: #2E7D32;">🏕️ Booking Confirmation — {target_expedition.expedition_route_name}</h2>
+            <p>Hello <strong>{trekker_account.user_full_name}</strong>,</p>
+            <p>Your booking has been confirmed successfully!</p>
+            <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
+                <tr><td style="padding: 8px; background: #f5f5f5;"><strong>Trek Name</strong></td>
+                    <td style="padding: 8px;">{target_expedition.expedition_route_name}</td></tr>
+                <tr><td style="padding: 8px; background: #f5f5f5;"><strong>Location</strong></td>
+                    <td style="padding: 8px;">{target_expedition.expedition_geographical_location}</td></tr>
+                <tr><td style="padding: 8px; background: #f5f5f5;"><strong>Start Date</strong></td>
+                    <td style="padding: 8px;">{target_expedition.expedition_scheduled_start_date}</td></tr>
+                <tr><td style="padding: 8px; background: #f5f5f5;"><strong>Participants</strong></td>
+                    <td style="padding: 8px;">{participants_count}</td></tr>
+                <tr><td style="padding: 8px; background: #f5f5f5;"><strong>Booking Reference</strong></td>
+                    <td style="padding: 8px;"><code>{booking_ref_code}</code></td></tr>
+            </table>
+            <p>Stay safe and enjoy your adventure! 🏔️</p>
+        </div></body></html>
+        """
+        _send_smtp_email_notification(
+            recipient_email_address=trekker_account.user_email_address,
+            email_subject_line=f"🎉 Booking Confirmed: {target_expedition.expedition_route_name}",
+            email_html_body=email_body
+        )
+    except Exception as email_err:
+        current_app.logger.warning(f"Failed to send booking confirmation email: {email_err}")
+
     # Invalidate cache since slot availability changed.
     try:
         redis_client = cache.cache._write_client
@@ -632,6 +664,34 @@ def handle_cancel_own_expedition_booking(booking_record_id: int):
         )
 
     db.session.commit()
+
+    # Send booking cancellation email.
+    try:
+        from .tasks import _send_smtp_email_notification
+        email_body = f"""
+        <html><body style="font-family: Arial, sans-serif; color: #333;">
+        <div style="max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
+            <h2 style="color: #ef5350;">❌ Booking Cancelled — {linked_expedition.expedition_route_name}</h2>
+            <p>Hello <strong>{trekker_account.user_full_name}</strong>,</p>
+            <p>Your booking for the expedition <strong>{linked_expedition.expedition_route_name}</strong> has been cancelled successfully.</p>
+            <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
+                <tr><td style="padding: 8px; background: #f5f5f5;"><strong>Trek Name</strong></td>
+                    <td style="padding: 8px;">{linked_expedition.expedition_route_name}</td></tr>
+                <tr><td style="padding: 8px; background: #f5f5f5;"><strong>Booking Reference</strong></td>
+                    <td style="padding: 8px;"><code>{target_booking.booking_confirmation_reference_code}</code></td></tr>
+                <tr><td style="padding: 8px; background: #f5f5f5;"><strong>Cancellation Reason</strong></td>
+                    <td style="padding: 8px;">{target_booking.cancellation_reason_description or 'No reason provided'}</td></tr>
+            </table>
+            <p>Your slot has been restored. We hope to see you on another trail soon! 🏔️</p>
+        </div></body></html>
+        """
+        _send_smtp_email_notification(
+            recipient_email_address=trekker_account.user_email_address,
+            email_subject_line=f"Booking Cancelled: {linked_expedition.expedition_route_name}",
+            email_html_body=email_body
+        )
+    except Exception as email_err:
+        current_app.logger.warning(f"Failed to send booking cancellation email: {email_err}")
 
     # Invalidate open-treks cache.
     try:

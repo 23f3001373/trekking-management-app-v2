@@ -276,7 +276,7 @@ def handle_staff_expedition_operational_update(expedition_record_id: int):
         current_status = target_expedition.current_expedition_lifecycle_status
 
         permitted_transitions = STAFF_PERMITTED_STATUS_TRANSITIONS.get(current_status, [])
-        if requested_new_status not in permitted_transitions:
+        if requested_new_status != current_status and requested_new_status not in permitted_transitions:
             return jsonify({
                 "error": (
                     f"Cannot transition from '{current_status.value}' to "
