@@ -1,38 +1,4 @@
-"""
-trekker_routes.py — Trekker Self-Service Blueprint
-===================================================
-All endpoints under `/api/trekker/*` serve the end-user (Trekker) experience:
 
-  • Explore open expeditions with filtering and Redis-cached results.
-  • Book a slot on an open expedition (atomic slot decrement + double-booking guard).
-  • Cancel an existing booking (slot restore).
-  • View booking history with full expedition details.
-  • Update profile and change password.
-  • Trigger an async CSV export of booking history via Celery.
-
-Critical Transactional Design — Booking Creation
--------------------------------------------------
-The booking creation flow is the most sensitive transaction in the system.
-Two concurrent trekkers attempting to book the last available slot must not
-both succeed (overbooking). We handle this with:
-
-  1. An optimistic lock check: read `available_participant_slots_remaining`.
-  2. A decrement + commit within a single transaction.
-  3. A re-read AFTER decrement: if slots went negative, roll back and reject.
-  4. The DB-level UNIQUE constraint on (trekker_id, expedition_id) prevents
-     double-bookings even if the app-level check is somehow bypassed.
-
-At SQLite's default isolation level (`SERIALIZABLE`), concurrent writes are
-serialised, making the optimistic approach safe for this use case. A PostgreSQL
-deployment would use `SELECT FOR UPDATE` row-level locks instead.
-
-Redis Caching Strategy for Open Treks
---------------------------------------
-Results of GET /api/trekker/expeditions/open are cached in Redis for 5 minutes
-using a key built from the filter parameters. On first miss, the DB is queried
-and the result is stored. Cache is invalidated by admin/staff writes in their
-respective blueprints.
-"""
 
 import csv
 import hashlib
@@ -65,37 +31,20 @@ from .tasks import (
     dispatch_booking_history_csv_export_task,
 )
 
-
-# --------------------------------------------------------------------------- #
-# Blueprint Declaration                                                         #
-# --------------------------------------------------------------------------- #
 trekker_selfservice_blueprint = Blueprint(
     "trekker_selfservice_blueprint",
     __name__,
     url_prefix="/api/trekker"
 )
 
-# Pre-instantiated schema objects.
 _profile_update_schema = TrekkerProfileUpdateRequestSchema()
 _new_booking_schema = NewParticipantBookingRequestSchema()
 _cancellation_schema = BookingCancellationRequestSchema()
 _open_expedition_filter_schema = OpenExpeditionFilterQuerySchema()
 _password_change_schema = PasswordChangeRequestSchema()
 
-
-# --------------------------------------------------------------------------- #
-# RBAC Decorator — Trekker Role Guard                                           #
-# --------------------------------------------------------------------------- #
-
 def require_trekker_role(route_handler_function):
-    """
-    Decorator that enforces Trekker-only access on routes it wraps.
 
-    Admin and Staff accounts are intentionally blocked from these routes —
-    they should use their respective dashboards. This clean separation means
-    the Trekker API can be designed purely for self-service use without
-    worrying about privileged edge cases.
-    """
     from functools import wraps
 
     @wraps(route_handler_function)
@@ -108,75 +57,29 @@ def require_trekker_role(route_handler_function):
         return route_handler_function(*args, **kwargs)
     return trekker_role_enforcement_wrapper
 
-
-# --------------------------------------------------------------------------- #
-# Utility: Fetch the authenticated Trekker's DB record                          #
-# --------------------------------------------------------------------------- #
-
 def _fetch_authenticated_trekker_account() -> PlatformUserAccount | None:
-    """
-    Fetches the PlatformUserAccount for the currently authenticated Trekker.
 
-    Called at the start of routes that need the full account object (not just
-    the JWT identity string). Returns None only in the edge case where the
-    account was deleted after the token was issued.
-
-    Returns:
-        PlatformUserAccount | None: The account object or None if not found.
-    """
     current_user_email = get_jwt_identity()
     return PlatformUserAccount.query.filter_by(
         user_email_address=current_user_email
     ).first()
 
-
-# =========================================================================== #
-#  TREKKER PROFILE MANAGEMENT                                                   #
-# =========================================================================== #
-
 @trekker_selfservice_blueprint.route("/profile", methods=["GET"])
 @jwt_required()
 @require_trekker_role
 def handle_get_trekker_own_profile():
-    """
-    Returns the authenticated Trekker's own profile details.
 
-    This is the profile page endpoint — distinct from `/api/auth/me` because
-    it may be extended in future to include aggregated stats (total treks done,
-    preferred difficulty, etc.) specific to the Trekker experience.
-
-    Returns:
-        200: Safe public dict of the trekker's account.
-        404: Account not found (edge case).
-    """
     trekker_account = _fetch_authenticated_trekker_account()
     if trekker_account is None:
         return jsonify({"error": "Account not found.", "error_code": "ACCOUNT_NOT_FOUND"}), 404
 
     return jsonify({"trekker_profile": trekker_account.to_safe_public_dict()}), 200
 
-
 @trekker_selfservice_blueprint.route("/profile", methods=["PATCH"])
 @jwt_required()
 @require_trekker_role
 def handle_update_trekker_own_profile():
-    """
-    Allows a Trekker to update their own profile fields.
 
-    Only the fields present in the request body are updated (PATCH semantics).
-    The route validates with TrekkerProfileUpdateRequestSchema and applies
-    only the non-None validated values to the model.
-
-    Fields NOT updatable via this endpoint (require separate flows):
-      • user_email_address (requires verification flow)
-      • hashed_password_credential (use /profile/password instead)
-      • assigned_platform_role (admin-only)
-
-    Returns:
-        200: Updated trekker profile dict.
-        400: Validation error.
-        404: Account not found.
-    """
     trekker_account = _fetch_authenticated_trekker_account()
     if trekker_account is None:
         return jsonify({"error": "Account not found.", "error_code": "ACCOUNT_NOT_FOUND"}), 404
@@ -188,7 +91,6 @@ def handle_update_trekker_own_profile():
     except ValidationError as schema_error:
         return jsonify({"validation_errors": schema_error.messages}), 400
 
-    # Apply only provided (non-None) updates to avoid overwriting existing data.
     updatable_profile_fields = [
         "user_full_name",
         "user_contact_phone_number",
@@ -208,23 +110,11 @@ def handle_update_trekker_own_profile():
         "updated_profile": trekker_account.to_safe_public_dict()
     }), 200
 
-
 @trekker_selfservice_blueprint.route("/profile/password", methods=["PUT"])
 @jwt_required()
 @require_trekker_role
 def handle_trekker_password_change():
-    """
-    Changes the authenticated Trekker's password after verifying the current one.
 
-    Uses PUT (full replacement) semantics rather than PATCH because the password
-    field is atomic — either the entire operation succeeds or it doesn't.
-
-    Returns:
-        200: Password changed successfully.
-        400: Validation error or passwords are the same.
-        401: Current password is incorrect.
-        404: Account not found.
-    """
     trekker_account = _fetch_authenticated_trekker_account()
     if trekker_account is None:
         return jsonify({"error": "Account not found.", "error_code": "ACCOUNT_NOT_FOUND"}), 404
@@ -236,7 +126,6 @@ def handle_trekker_password_change():
     except ValidationError as schema_error:
         return jsonify({"validation_errors": schema_error.messages}), 400
 
-    # Verify the current password before allowing the change.
     if not trekker_account.verify_submitted_password(validated_password_change["current_password"]):
         return jsonify({
             "error": "Current password is incorrect.",
@@ -251,62 +140,26 @@ def handle_trekker_password_change():
         "message": "Your password has been updated successfully. Please log in again."
     }), 200
 
-
-# =========================================================================== #
-#  EXPEDITION EXPLORATION (with Redis Caching)                                   #
-# =========================================================================== #
-
 @trekker_selfservice_blueprint.route("/expeditions/open", methods=["GET"])
 @jwt_required()
 @require_trekker_role
 def handle_explore_open_expeditions():
-    """
-    Returns a paginated, filtered list of expeditions currently open for booking.
 
-    CACHING BEHAVIOUR
-    ------------------
-    Results are cached in Redis for 5 minutes. The cache key is derived from
-    a stable hash of all filter parameters so each unique filter combination
-    gets its own cache entry. This means:
-      • All trekkers using the same filters share one cache hit.
-      • Different filter combinations don't collide.
-      • Cache is invalidated globally by admin/staff writes.
-
-    FILTERING
-    ----------
-    Supports server-side filtering by:
-      - difficulty_level_filter: "Easy" | "Moderate" | "Hard"
-      - geographical_location_keyword: partial text match (case-insensitive)
-      - minimum_duration_days / maximum_duration_days
-      - maximum_price_inr
-
-    PAGINATION
-    ----------
-    Default: 12 results per page (grid-friendly for the SPA's card layout).
-
-    Returns:
-        200: Paginated list of open expedition summary dicts.
-        400: Invalid filter parameter values.
-    """
-    # --- Validate and parse filter query parameters ---
     try:
         validated_filter_params = _open_expedition_filter_schema.load(request.args.to_dict())
     except ValidationError as schema_error:
         return jsonify({"validation_errors": schema_error.messages}), 400
 
-    # --- Build a stable cache key from the filter parameters ---
     filter_params_canonical_string = json.dumps(validated_filter_params, sort_keys=True, default=str)
     filter_hash_digest = hashlib.md5(filter_params_canonical_string.encode()).hexdigest()
     cache_key_prefix = current_app.config.get("CACHE_KEY_PREFIX_OPEN_TREKS", "trek_platform:open_treks:")
     redis_cache_key_for_this_filter = f"{cache_key_prefix}{filter_hash_digest}"
 
-    # --- Cache hit: return stored response immediately ---
     cached_expedition_response = cache.get(redis_cache_key_for_this_filter)
     if cached_expedition_response is not None:
         current_app.logger.debug(f"Cache HIT for open treks key: {redis_cache_key_for_this_filter}")
         return jsonify(cached_expedition_response), 200
 
-    # --- Cache miss: query the database and build the response ---
     current_app.logger.debug(f"Cache MISS for open treks key: {redis_cache_key_for_this_filter}")
 
     open_expeditions_query = TrekkingRouteExpedition.query.filter_by(
@@ -315,7 +168,6 @@ def handle_explore_open_expeditions():
         TrekkingRouteExpedition.available_participant_slots_remaining > 0
     )
 
-    # Apply optional filters.
     if validated_filter_params.get("difficulty_level_filter"):
         from .models import ExpeditionDifficultyLevel
         open_expeditions_query = open_expeditions_query.filter_by(
@@ -369,28 +221,15 @@ def handle_explore_open_expeditions():
         "cached_at_utc": datetime.now(timezone.utc).isoformat(),
     }
 
-    # Store in Redis for 5 minutes (300 seconds).
     cache.set(redis_cache_key_for_this_filter, response_payload, timeout=300)
 
     return jsonify(response_payload), 200
-
 
 @trekker_selfservice_blueprint.route("/expeditions/<int:expedition_record_id>", methods=["GET"])
 @jwt_required()
 @require_trekker_role
 def handle_get_single_expedition_detail_for_trekker(expedition_record_id: int):
-    """
-    Returns the full detail of a single expedition for a Trekker's detail view.
 
-    Unlike the explore listing (which only shows OPEN expeditions), this
-    endpoint also returns CLOSED expeditions so a trekker can see details
-    of their past bookings even after the expedition closed.
-
-    Returns:
-        200: Expedition summary dict.
-        404: Expedition not found or not accessible (PENDING/CANCELLED hidden from Trekkers).
-    """
-    # Trekkers should NOT see PENDING or CANCELLED expeditions in detail view.
     accessible_statuses = [
         ExpeditionLifecycleStatus.OPEN,
         ExpeditionLifecycleStatus.APPROVED,
@@ -411,40 +250,11 @@ def handle_get_single_expedition_detail_for_trekker(expedition_record_id: int):
 
     return jsonify({"expedition_detail": target_expedition.to_public_summary_dict()}), 200
 
-
-# =========================================================================== #
-#  BOOKING MANAGEMENT                                                            #
-# =========================================================================== #
-
 @trekker_selfservice_blueprint.route("/bookings", methods=["POST"])
 @jwt_required()
 @require_trekker_role
 def handle_create_new_expedition_booking():
-    """
-    Creates a new expedition booking for the authenticated Trekker.
 
-    RACE CONDITION PROTECTION
-    --------------------------
-    SQLite serialises concurrent writes by its WAL journal mode, so this
-    atomic pattern is safe:
-      1. Fetch expedition with row-level lock intent (for_update equivalent).
-      2. Check slot availability.
-      3. Decrement slot counter.
-      4. Insert booking record.
-      5. Commit all in one transaction.
-    If slots reach 0 between step 2 and 3 from a concurrent request, the
-    app-level check at step 2 of the later request will catch the mismatch.
-
-    The DB-level UNIQUE constraint on (trekker_id, expedition_id) is the
-    final defence against double-booking regardless of concurrency.
-
-    Returns:
-        201: Created booking record with confirmation code.
-        400: Validation error.
-        404: Expedition not found.
-        409: No slots available (sold out) or duplicate booking.
-        422: Expedition not currently open for booking.
-    """
     trekker_account = _fetch_authenticated_trekker_account()
     if trekker_account is None:
         return jsonify({"error": "Account not found.", "error_code": "ACCOUNT_NOT_FOUND"}), 404
@@ -459,7 +269,6 @@ def handle_create_new_expedition_booking():
     target_expedition_id = validated_booking_data["booked_expedition_instance_id"]
     participants_count = validated_booking_data.get("number_of_participants_in_booking", 1)
 
-    # --- Fetch the expedition and check availability ---
     target_expedition = TrekkingRouteExpedition.query.get(target_expedition_id)
     if target_expedition is None:
         return jsonify({
@@ -484,43 +293,54 @@ def handle_create_new_expedition_booking():
             "error_code": "INSUFFICIENT_SLOTS_AVAILABLE"
         }), 409
 
-    # --- Check for duplicate booking (same trekker, same expedition) ---
-    existing_booking_for_this_trekker = ParticipantBookingRecord.query.filter_by(
+    existing_booking = ParticipantBookingRecord.query.filter_by(
         booking_owner_trekker_id=trekker_account.user_account_id,
         booked_expedition_instance_id=target_expedition_id,
-    ).filter(
-        ParticipantBookingRecord.current_booking_lifecycle_status != BookingLifecycleStatus.CANCELLED
     ).first()
 
-    if existing_booking_for_this_trekker is not None:
-        return jsonify({
-            "error": "You already have an active booking for this expedition.",
-            "error_code": "DUPLICATE_BOOKING_ATTEMPT",
-            "existing_booking_reference": existing_booking_for_this_trekker.booking_confirmation_reference_code
-        }), 409
+    if existing_booking is not None:
+        if existing_booking.current_booking_lifecycle_status != BookingLifecycleStatus.CANCELLED:
+            return jsonify({
+                "error": "You already have an active booking for this expedition.",
+                "error_code": "DUPLICATE_BOOKING_ATTEMPT",
+                "existing_booking_reference": existing_booking.booking_confirmation_reference_code
+            }), 409
 
-    # --- Atomically decrement slots and create the booking record ---
-    target_expedition.available_participant_slots_remaining -= participants_count
+        target_expedition.available_participant_slots_remaining -= participants_count
 
-    # Generate a human-readable confirmation code.
-    booking_ref_code = (
-        f"TRK-{target_expedition_id}-"
-        f"{trekker_account.user_account_id}-"
-        f"{datetime.now(timezone.utc).strftime('%Y%m%d%H%M')}"
-    )
+        booking_ref_code = (
+            f"TRK-{target_expedition_id}-"
+            f"{trekker_account.user_account_id}-"
+            f"{datetime.now(timezone.utc).strftime('%Y%m%d%H%M')}"
+        )
 
-    new_booking_record = ParticipantBookingRecord(
-        booking_owner_trekker_id=trekker_account.user_account_id,
-        booked_expedition_instance_id=target_expedition_id,
-        current_booking_lifecycle_status=BookingLifecycleStatus.BOOKED,
-        booking_confirmation_reference_code=booking_ref_code,
-        number_of_participants_in_booking=participants_count,
-        trekker_special_requirements_note=validated_booking_data.get("trekker_special_requirements_note"),
-    )
+        existing_booking.current_booking_lifecycle_status = BookingLifecycleStatus.BOOKED
+        existing_booking.booking_confirmation_reference_code = booking_ref_code
+        existing_booking.number_of_participants_in_booking = participants_count
+        existing_booking.trekker_special_requirements_note = validated_booking_data.get("trekker_special_requirements_note")
+        existing_booking.booking_placed_at_utc = datetime.now(timezone.utc)
+        existing_booking.booking_last_status_changed_at_utc = datetime.now(timezone.utc)
 
-    db.session.add(new_booking_record)
+        new_booking_record = existing_booking
+    else:
+        target_expedition.available_participant_slots_remaining -= participants_count
 
-    # If the slot count just hit zero, auto-close the expedition.
+        booking_ref_code = (
+            f"TRK-{target_expedition_id}-"
+            f"{trekker_account.user_account_id}-"
+            f"{datetime.now(timezone.utc).strftime('%Y%m%d%H%M')}"
+        )
+
+        new_booking_record = ParticipantBookingRecord(
+            booking_owner_trekker_id=trekker_account.user_account_id,
+            booked_expedition_instance_id=target_expedition_id,
+            current_booking_lifecycle_status=BookingLifecycleStatus.BOOKED,
+            booking_confirmation_reference_code=booking_ref_code,
+            number_of_participants_in_booking=participants_count,
+            trekker_special_requirements_note=validated_booking_data.get("trekker_special_requirements_note"),
+        )
+        db.session.add(new_booking_record)
+
     if target_expedition.available_participant_slots_remaining == 0:
         target_expedition.current_expedition_lifecycle_status = ExpeditionLifecycleStatus.CLOSED
         current_app.logger.info(
@@ -529,7 +349,6 @@ def handle_create_new_expedition_booking():
 
     db.session.commit()
 
-    # Send booking confirmation email.
     try:
         from .tasks import _send_smtp_email_notification
         email_body = f"""
@@ -561,7 +380,6 @@ def handle_create_new_expedition_booking():
     except Exception as email_err:
         current_app.logger.warning(f"Failed to send booking confirmation email: {email_err}")
 
-    # Invalidate cache since slot availability changed.
     try:
         redis_client = cache.cache._write_client
         prefix = current_app.config.get("CACHE_KEY_PREFIX_OPEN_TREKS", "trek_platform:open_treks:")
@@ -583,28 +401,11 @@ def handle_create_new_expedition_booking():
         "booking_details": new_booking_record.to_full_detail_dict()
     }), 201
 
-
 @trekker_selfservice_blueprint.route("/bookings/<int:booking_record_id>/cancel", methods=["PATCH"])
 @jwt_required()
 @require_trekker_role
 def handle_cancel_own_expedition_booking(booking_record_id: int):
-    """
-    Cancels a Trekker's own BOOKED expedition reservation.
 
-    Cancellation Logic:
-      1. Verify the booking belongs to the authenticated trekker.
-      2. Verify the booking is in BOOKED status (cannot cancel a COMPLETED booking).
-      3. Change status to CANCELLED.
-      4. Restore the slot to the expedition's available count.
-      5. If the expedition was auto-CLOSED due to being full, re-open it.
-
-    Returns:
-        200: Cancellation confirmed with updated booking details.
-        400: Validation error on the request body.
-        403: Booking does not belong to this trekker.
-        404: Booking not found.
-        422: Booking is already cancelled or completed.
-    """
     trekker_account = _fetch_authenticated_trekker_account()
     if trekker_account is None:
         return jsonify({"error": "Account not found.", "error_code": "ACCOUNT_NOT_FOUND"}), 404
@@ -616,7 +417,6 @@ def handle_cancel_own_expedition_booking(booking_record_id: int):
             "error_code": "BOOKING_NOT_FOUND"
         }), 404
 
-    # Ownership check: trekkers can only cancel their own bookings.
     if target_booking.booking_owner_trekker_id != trekker_account.user_account_id:
         return jsonify({
             "error": "You can only cancel your own bookings.",
@@ -640,19 +440,16 @@ def handle_cancel_own_expedition_booking(booking_record_id: int):
     except ValidationError as schema_error:
         return jsonify({"validation_errors": schema_error.messages}), 400
 
-    # --- Execute cancellation ---
     target_booking.current_booking_lifecycle_status = BookingLifecycleStatus.CANCELLED
     target_booking.cancellation_reason_description = validated_cancellation_data.get(
         "cancellation_reason_description"
     )
 
-    # Restore the slot to the expedition.
     linked_expedition = target_booking.booked_expedition_instance
     linked_expedition.available_participant_slots_remaining += (
         target_booking.number_of_participants_in_booking
     )
 
-    # If the expedition was CLOSED because it was full and now has a free slot, re-open it.
     if (
         linked_expedition.current_expedition_lifecycle_status == ExpeditionLifecycleStatus.CLOSED
         and linked_expedition.available_participant_slots_remaining > 0
@@ -665,7 +462,6 @@ def handle_cancel_own_expedition_booking(booking_record_id: int):
 
     db.session.commit()
 
-    # Send booking cancellation email.
     try:
         from .tasks import _send_smtp_email_notification
         email_body = f"""
@@ -693,7 +489,6 @@ def handle_cancel_own_expedition_booking(booking_record_id: int):
     except Exception as email_err:
         current_app.logger.warning(f"Failed to send booking cancellation email: {email_err}")
 
-    # Invalidate open-treks cache.
     try:
         redis_client = cache.cache._write_client
         prefix = current_app.config.get("CACHE_KEY_PREFIX_OPEN_TREKS", "trek_platform:open_treks:")
@@ -708,24 +503,11 @@ def handle_cancel_own_expedition_booking(booking_record_id: int):
         "cancelled_booking": target_booking.to_full_detail_dict()
     }), 200
 
-
 @trekker_selfservice_blueprint.route("/bookings", methods=["GET"])
 @jwt_required()
 @require_trekker_role
 def handle_list_own_booking_history():
-    """
-    Returns the authenticated Trekker's complete booking history.
 
-    Ordered by most-recent booking first. Includes all statuses (BOOKED,
-    CANCELLED, COMPLETED) for a full historical record. This is also the
-    data source for the CSV export Celery task.
-
-    Query Parameters:
-        status_filter (str): Optional. Filter by booking status.
-
-    Returns:
-        200: List of full booking detail dicts.
-    """
     trekker_account = _fetch_authenticated_trekker_account()
     if trekker_account is None:
         return jsonify({"error": "Account not found.", "error_code": "ACCOUNT_NOT_FOUND"}), 404
@@ -755,40 +537,15 @@ def handle_list_own_booking_history():
         "total_booking_count": len(all_bookings)
     }), 200
 
-
-# =========================================================================== #
-#  ASYNC CSV EXPORT                                                              #
-# =========================================================================== #
-
 @trekker_selfservice_blueprint.route("/bookings/export-csv", methods=["POST"])
 @jwt_required()
 @require_trekker_role
 def handle_trigger_booking_history_csv_export():
-    """
-    Triggers an asynchronous Celery task to export the trekker's booking
-    history to CSV format.
 
-    WHY async and not synchronous?
-    -----------------------------------------------
-    For trekkers with many bookings (50+), building a CSV involves multiple
-    DB joins and string formatting. Doing this synchronously on a web request
-    thread would block that thread for potentially several seconds, degrading
-    the user experience for all other concurrent users. By offloading to Celery:
-      • The HTTP response is immediate (HTTP 202 Accepted).
-      • The SPA shows a "preparing your export…" spinner.
-      • The worker processes the CSV in the background.
-      • The worker notifies the user (via a platform notification record or
-        email) when the file is ready for download.
-
-    Returns:
-        202: Task accepted; includes the Celery task ID for status polling.
-    """
     trekker_account = _fetch_authenticated_trekker_account()
     if trekker_account is None:
         return jsonify({"error": "Account not found.", "error_code": "ACCOUNT_NOT_FOUND"}), 404
 
-    # Dispatch the Celery task. The task receives the trekker's account ID
-    # (not the full account object — Celery tasks must serialize arguments as JSON).
     dispatched_celery_task = dispatch_booking_history_csv_export_task.delay(
         trekker_account_id=trekker_account.user_account_id,
         trekker_email_address=trekker_account.user_email_address,

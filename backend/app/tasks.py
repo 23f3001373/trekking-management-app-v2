@@ -1,47 +1,4 @@
-"""
-tasks.py — Celery Background Task Definitions
-==============================================
-This module defines all asynchronous and scheduled tasks for the Trekking
-Management Platform. Tasks run in a separate Celery worker process and have
-full access to the Flask application context (via the ContextAwareCeleryTask
-base class configured in __init__.py).
 
-Three categories of tasks are defined here:
-
-  CATEGORY A — Scheduled Periodic Tasks (driven by Celery Beat):
-    1. `send_daily_upcoming_trek_reminder_emails` — Runs every day at 08:00 IST.
-       Queries for expeditions starting in the next 48 hours and emails
-       all BOOKED participants a reminder with their expedition details.
-
-    2. `generate_monthly_admin_activity_report_pdf` — Runs on the 1st of every
-       month at 06:00 IST. Compiles an HTML/PDF report of platform activity
-       (new registrations, bookings, completed treks) for the Admin.
-
-  CATEGORY B — User-Triggered Async Tasks:
-    3. `dispatch_booking_history_csv_export_task` — Triggered by a Trekker via
-       POST /api/trekker/bookings/export-csv. Builds a CSV in memory and either
-       emails it to the trekker or saves it to a file path for download.
-
-HOW Celery Beat scheduling is configured:
-------------------------------------------
-The `beat_schedule` dict at the bottom of this file is read by the Celery Beat
-scheduler process. Each entry maps a human-readable task name to a schedule
-(crontab or interval) and the task function to call.
-
-HOW to run the workers:
-------------------------
-  # Start the Celery worker (processes tasks from the queue):
-  celery -A celery_worker.celery_task_queue worker --loglevel=info
-
-  # Start the Celery Beat scheduler (enqueues periodic tasks):
-  celery -A celery_worker.celery_task_queue beat --loglevel=info
-
-SMTP / Email Note:
-------------------
-In development, the email sending is implemented with Flask-Mail via SMTP.
-In a production deployment, replace with a transactional email provider SDK
-(SendGrid, AWS SES, Mailgun) for reliability and deliverability guarantees.
-"""
 
 import csv
 import io
@@ -69,16 +26,8 @@ from .models import (
     BookingLifecycleStatus,
 )
 
-
-# =========================================================================== #
-#  UTILITY: Google Chat Webhook Helper                                         #
-# =========================================================================== #
-
 def _send_google_chat_webhook_notification(webhook_url: str, message_text: str) -> bool:
-    """
-    Sends a message to a Google Chat space using a incoming webhook.
-    Returns True if sent successfully, False otherwise.
-    """
+
     if not webhook_url:
         return False
     try:
@@ -93,11 +42,6 @@ def _send_google_chat_webhook_notification(webhook_url: str, message_text: str) 
         current_app.logger.error(f"Google Chat webhook notification error: {e}")
         return False
 
-
-# =========================================================================== #
-#  UTILITY: Email Sending Helper                                                 #
-# =========================================================================== #
-
 def _send_smtp_email_notification(
     recipient_email_address: str,
     email_subject_line: str,
@@ -105,23 +49,7 @@ def _send_smtp_email_notification(
     attachment_filename: str = None,
     attachment_bytes_content: bytes = None,
 ) -> bool:
-    """
-    Sends an email via SMTP using configuration from the Flask app config.
 
-    This is a low-level utility used by all task functions that need to send
-    notifications. It is intentionally simple — no queueing, no retry logic
-    at this level (Celery task retries handle that at a higher level).
-
-    Args:
-        recipient_email_address: The To: address.
-        email_subject_line: The Subject: header.
-        email_html_body: The HTML body of the email (rich formatting supported).
-        attachment_filename: Optional. Filename for a file attachment.
-        attachment_bytes_content: Optional. Raw bytes of the attachment.
-
-    Returns:
-        bool: True if the email was sent without SMTP errors, False otherwise.
-    """
     mail_config = {
         "server": current_app.config.get("MAIL_SERVER", "smtp.gmail.com"),
         "port": current_app.config.get("MAIL_PORT", 587),
@@ -131,7 +59,6 @@ def _send_smtp_email_notification(
         "sender": current_app.config.get("MAIL_DEFAULT_SENDER", "noreply@trekkingplatform.com"),
     }
 
-    # If SMTP credentials are not configured (dev environment) or placeholder values used, log and write to local file.
     is_placeholder = (
         not mail_config["username"] or 
         not mail_config["password"] or 
@@ -162,7 +89,7 @@ def _send_smtp_email_notification(
             )
         except Exception as e:
             current_app.logger.error(f"Error simulating email save: {e}")
-        return True  # Return True so tasks don't fail in development.
+        return True
 
     try:
         email_message = MIMEMultipart("mixed")
@@ -173,7 +100,7 @@ def _send_smtp_email_notification(
         html_part = MIMEText(email_html_body, "html", "utf-8")
         email_message.attach(html_part)
 
-        # Attach a file if one is provided (used for CSV/PDF attachments).
+        # check credentials
         if attachment_filename and attachment_bytes_content:
             file_attachment_part = MIMEBase("application", "octet-stream")
             file_attachment_part.set_payload(attachment_bytes_content)
@@ -184,59 +111,46 @@ def _send_smtp_email_notification(
             )
             email_message.attach(file_attachment_part)
 
-        with smtplib.SMTP(mail_config["server"], mail_config["port"]) as smtp_connection:
-            smtp_connection.ehlo()
-            if mail_config["use_tls"]:
-                smtp_connection.starttls()
-            smtp_connection.login(mail_config["username"], mail_config["password"])
-            smtp_connection.sendmail(
-                mail_config["sender"],
-                recipient_email_address,
-                email_message.as_string()
-            )
+        app = current_app._get_current_object()
+        def send_async_email():
+            with app.app_context():
+                try:
+                    with smtplib.SMTP(mail_config["server"], mail_config["port"], timeout=5) as smtp_connection:
+                        smtp_connection.ehlo()
+                        if mail_config["use_tls"]:
+                            smtp_connection.starttls()
+                        smtp_connection.login(mail_config["username"], mail_config["password"])
+                        smtp_connection.sendmail(
+                            mail_config["sender"],
+                            recipient_email_address,
+                            email_message.as_string()
+                        )
+                    app.logger.info(
+                        f"Email sent successfully to {recipient_email_address}: '{email_subject_line}'"
+                    )
+                except Exception as smtp_error:
+                    app.logger.error(
+                        f"SMTP error sending to {recipient_email_address}: {smtp_error}"
+                    )
 
-        current_app.logger.info(
-            f"Email sent successfully to {recipient_email_address}: '{email_subject_line}'"
-        )
+        import threading
+        threading.Thread(target=send_async_email, daemon=True).start()
         return True
 
-    except smtplib.SMTPException as smtp_error:
+    except Exception as general_error:
         current_app.logger.error(
-            f"SMTP error sending to {recipient_email_address}: {smtp_error}"
+            f"Error preparing email message to {recipient_email_address}: {general_error}"
         )
         return False
-
-
-# =========================================================================== #
-#  CATEGORY A — SCHEDULED PERIODIC TASKS                                        #
-# =========================================================================== #
 
 @celery_task_queue.task(
     bind=True,
     name="trekking_platform.tasks.send_daily_upcoming_trek_reminder_emails",
     max_retries=3,
-    default_retry_delay=300,  # Retry after 5 minutes on transient failures.
+    default_retry_delay=300,
 )
 def send_daily_upcoming_trek_reminder_notifications(self) -> dict:
-    """
-    SCHEDULED TASK — Runs daily at 08:00 IST (02:30 UTC).
 
-    Scans all OPEN/APPROVED expeditions scheduled to start within the next
-    48 hours and sends personalised email reminders to every BOOKED participant.
-
-    WHY 48-hour window instead of 24?
-    A 48-hour lead time gives trekkers enough time to travel to the assembly
-    point for multi-city trips, pack final gear, and arrange transportation.
-    A 24-hour window would be too late for long-distance participants.
-
-    Task Retry Behaviour:
-    If a transient error occurs (e.g., brief SMTP server downtime), Celery
-    automatically retries up to `max_retries=3` times with `default_retry_delay`
-    seconds between attempts, using the `self.retry(exc=exception)` pattern.
-
-    Returns:
-        dict: Summary of how many reminders were sent and how many failed.
-    """
     current_app.logger.info(
         "Celery task started: send_daily_upcoming_trek_reminder_notifications"
     )
@@ -244,7 +158,6 @@ def send_daily_upcoming_trek_reminder_notifications(self) -> dict:
     reminder_window_start = datetime.now(timezone.utc).date()
     reminder_window_end = reminder_window_start + timedelta(hours=48)
 
-    # Find all expeditions starting within the next 48 hours.
     upcoming_expeditions_in_window = TrekkingRouteExpedition.query.filter(
         TrekkingRouteExpedition.expedition_scheduled_start_date >= reminder_window_start,
         TrekkingRouteExpedition.expedition_scheduled_start_date <= reminder_window_end,
@@ -259,7 +172,6 @@ def send_daily_upcoming_trek_reminder_notifications(self) -> dict:
     total_reminders_failed = 0
 
     for upcoming_expedition in upcoming_expeditions_in_window:
-        # Get all confirmed participants for this expedition.
         confirmed_participants = (
             upcoming_expedition.registered_participant_bookings
             .filter_by(current_booking_lifecycle_status=BookingLifecycleStatus.BOOKED)
@@ -269,7 +181,6 @@ def send_daily_upcoming_trek_reminder_notifications(self) -> dict:
         for participant_booking in confirmed_participants:
             participant_trekker = participant_booking.booking_owner_trekker
 
-            # Build a personalised HTML email body.
             reminder_email_html = f"""
             <html><body style="font-family: Arial, sans-serif; color: #333;">
             <div style="max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
@@ -306,7 +217,6 @@ def send_daily_upcoming_trek_reminder_notifications(self) -> dict:
                 email_html_body=reminder_email_html,
             )
 
-            # Optional/Extra feature: Google Chat Webhook reminder integration
             google_chat_webhook_url = current_app.config.get("GOOGLE_CHAT_WEBHOOK_URL")
             if google_chat_webhook_url:
                 chat_message = (
@@ -334,46 +244,24 @@ def send_daily_upcoming_trek_reminder_notifications(self) -> dict:
     current_app.logger.info(f"Task completed: {task_summary}")
     return task_summary
 
-
 @celery_task_queue.task(
     bind=True,
     name="trekking_platform.tasks.generate_monthly_admin_activity_report_pdf",
     max_retries=2,
-    default_retry_delay=600,  # Retry after 10 minutes if PDF generation fails.
+    default_retry_delay=600,
 )
 def generate_monthly_admin_activity_report_pdf(self) -> dict:
-    """
-    SCHEDULED TASK — Runs on the 1st of every month at 06:00 IST (00:30 UTC).
 
-    Compiles a comprehensive monthly activity report for the Admin covering:
-      • New Trekker registrations in the past month.
-      • New bookings placed in the past month.
-      • Expeditions completed in the past month.
-      • Expeditions cancelled in the past month.
-      • Revenue estimate (bookings × price_per_person).
-
-    The report is generated as a styled HTML string. In a full production setup,
-    this would be rendered to PDF using WeasyPrint:
-        from weasyprint import HTML
-        pdf_bytes = HTML(string=html_report_content).write_pdf()
-
-    For this implementation, the HTML report itself is emailed to the Admin
-    as an attachment. PDF conversion is noted as a future enhancement.
-
-    Returns:
-        dict: Report generation summary with admin email delivery status.
-    """
     current_app.logger.info(
         "Celery task started: generate_monthly_admin_activity_report_pdf"
     )
 
     now_utc = datetime.now(timezone.utc)
-    # Report covers the previous calendar month.
     report_month_start = (now_utc.replace(day=1) - timedelta(days=1)).replace(day=1)
     report_month_end = now_utc.replace(day=1) - timedelta(seconds=1)
     month_label = report_month_start.strftime("%B %Y")
 
-    # --- Gather metrics for the report period ---
+    # query db
     new_trekker_registrations = PlatformUserAccount.query.filter(
         PlatformUserAccount.assigned_platform_role == UserPlatformRole.TREKKER,
         PlatformUserAccount.account_created_at_utc >= report_month_start,
@@ -397,7 +285,6 @@ def generate_monthly_admin_activity_report_pdf(self) -> dict:
         TrekkingRouteExpedition.expedition_record_last_updated_at_utc <= report_month_end,
     ).count()
 
-    # Revenue estimate: sum of (price × participants) for BOOKED/COMPLETED bookings.
     revenue_query_result = (
         db.session.query(
             db.func.sum(
@@ -421,27 +308,26 @@ def generate_monthly_admin_activity_report_pdf(self) -> dict:
     )
     estimated_monthly_revenue_inr = revenue_query_result or 0.0
 
-    # --- Build the HTML report ---
     html_report_content = f"""
     <html>
     <head>
         <style>
-            body {{ font-family: 'Segoe UI', sans-serif; background: #f8f9fa; color: #333; }}
+            body {{ font-family: 'Segoe UI', sans-serif; background:
             .report-container {{ max-width: 800px; margin: 30px auto; background: white;
                                  padding: 40px; border-radius: 10px;
                                  box-shadow: 0 2px 15px rgba(0,0,0,0.1); }}
-            h1 {{ color: #1B5E20; border-bottom: 3px solid #4CAF50; padding-bottom: 10px; }}
-            h2 {{ color: #2E7D32; }}
+            h1 {{ color:  # return response
+            h2 {{ color:
             .metric-grid {{ display: grid; grid-template-columns: 1fr 1fr;
                             gap: 20px; margin: 20px 0; }}
-            .metric-card {{ background: #E8F5E9; border-left: 5px solid #4CAF50;
+            .metric-card {{ background:
                             padding: 16px; border-radius: 5px; }}
-            .metric-card .value {{ font-size: 2em; font-weight: bold; color: #1B5E20; }}
-            .metric-card .label {{ color: #555; font-size: 0.9em; }}
-            .revenue-highlight {{ background: #FFF8E1; border-left: 5px solid #FFC107;
+            .metric-card .value {{ font-size: 2em; font-weight: bold; color:
+            .metric-card .label {{ color:
+            .revenue-highlight {{ background:
                                    padding: 20px; border-radius: 5px; margin: 20px 0; }}
-            .revenue-highlight .value {{ font-size: 2.5em; font-weight: bold; color: #F57F17; }}
-            footer {{ text-align: center; color: #888; font-size: 0.8em; margin-top: 30px; }}
+            .revenue-highlight .value {{ font-size: 2.5em; font-weight: bold; color:
+            footer {{ text-align: center; color:
         </style>
     </head>
     <body>
@@ -488,7 +374,6 @@ def generate_monthly_admin_activity_report_pdf(self) -> dict:
     </html>
     """
 
-    # Fetch the Admin email to send the report to.
     admin_account = PlatformUserAccount.query.filter_by(
         assigned_platform_role=UserPlatformRole.ADMIN
     ).first()
@@ -523,11 +408,6 @@ def generate_monthly_admin_activity_report_pdf(self) -> dict:
     current_app.logger.info(f"Monthly report task completed: {task_summary}")
     return task_summary
 
-
-# =========================================================================== #
-#  CATEGORY B — USER-TRIGGERED ASYNC TASKS                                      #
-# =========================================================================== #
-
 @celery_task_queue.task(
     bind=True,
     name="trekking_platform.tasks.dispatch_booking_history_csv_export_task",
@@ -540,37 +420,12 @@ def dispatch_booking_history_csv_export_task(
     trekker_email_address: str,
     trekker_full_name: str,
 ) -> dict:
-    """
-    ASYNC TASK — Triggered by Trekker via POST /api/trekker/bookings/export-csv.
 
-    Builds a complete CSV of the trekker's booking history and emails it to
-    them as an attachment. The trekker receives an HTTP 202 immediately and
-    this task runs in the background, notifying them via email when done.
-
-    WHY pass IDs/strings instead of model objects?
-    Celery serialises task arguments as JSON. SQLAlchemy model objects cannot
-    be JSON-serialised. We pass only the scalar identifiers needed to re-fetch
-    data inside the worker's Flask context.
-
-    CSV Columns:
-      Booking Ref, Expedition Name, Location, Difficulty, Start Date, End Date,
-      Duration (days), Price (INR), Participants, Status, Special Requirements,
-      Cancellation Reason, Booked At
-
-    Args:
-        trekker_account_id: The PK of the Trekker's PlatformUserAccount.
-        trekker_email_address: Email address to deliver the CSV to.
-        trekker_full_name: Used for personalisation in the email body.
-
-    Returns:
-        dict: Task execution summary including row count and email status.
-    """
     current_app.logger.info(
         f"CSV export task started for trekker_account_id={trekker_account_id}"
     )
 
     try:
-        # Re-fetch the trekker's bookings inside the Celery worker's app context.
         all_trekker_bookings = (
             ParticipantBookingRecord.query
             .filter_by(booking_owner_trekker_id=trekker_account_id)
@@ -578,11 +433,9 @@ def dispatch_booking_history_csv_export_task(
             .all()
         )
 
-        # Build the CSV in memory using Python's stdlib csv module.
         csv_output_buffer = io.StringIO()
         csv_writer = csv.writer(csv_output_buffer, quoting=csv.QUOTE_ALL)
 
-        # Write header row.
         csv_writer.writerow([
             "Booking Reference Code",
             "Expedition Name",
@@ -600,7 +453,6 @@ def dispatch_booking_history_csv_export_task(
             "Last Status Change (UTC)",
         ])
 
-        # Write one row per booking record.
         for booking in all_trekker_bookings:
             expedition = booking.booked_expedition_instance
             csv_writer.writerow([
@@ -625,14 +477,12 @@ def dispatch_booking_history_csv_export_task(
             ])
 
         csv_bytes_content = csv_output_buffer.getvalue().encode("utf-8-sig")
-        # utf-8-sig adds a BOM so Excel correctly interprets the encoding.
         csv_output_buffer.close()
 
         total_rows_exported = len(all_trekker_bookings)
         export_timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
         csv_attachment_filename = f"booking_history_{trekker_account_id}_{export_timestamp}.csv"
 
-        # Compose the notification email with CSV attached.
         completion_email_html = f"""
         <html><body style="font-family: Arial, sans-serif; color: #333;">
         <div style="max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
@@ -675,29 +525,14 @@ def dispatch_booking_history_csv_export_task(
             f"CSV export task failed for trekker_account_id={trekker_account_id}: "
             f"{task_execution_error}"
         )
-        # Celery auto-retry: re-raise after registering for retry.
         raise self.retry(exc=task_execution_error)
 
-
-# =========================================================================== #
-#  CELERY BEAT SCHEDULE — Periodic Task Configuration                            #
-# =========================================================================== #
-#
-# This dict is read by the `celery beat` process to know when to enqueue
-# each periodic task. Tasks are identified by their `name` argument.
-#
-# Crontab expressions follow the same convention as Unix cron:
-#   crontab(hour=2, minute=30) → every day at 02:30 UTC (08:00 IST)
-#   crontab(day_of_month=1, hour=0, minute=30) → 1st of every month at 00:30 UTC
-
 CELERY_BEAT_PERIODIC_TASK_SCHEDULE = {
-    # Daily reminder at 08:00 IST (02:30 UTC)
     "daily-upcoming-trek-reminder-emails": {
         "task": "trekking_platform.tasks.send_daily_upcoming_trek_reminder_emails",
         "schedule": crontab(hour=2, minute=30),
-        "options": {"expires": 3600},  # Discard if not consumed within 1 hour.
+        "options": {"expires": 3600},
     },
-    # Monthly report on the 1st of the month at 06:00 IST (00:30 UTC)
     "monthly-admin-activity-report-pdf": {
         "task": "trekking_platform.tasks.generate_monthly_admin_activity_report_pdf",
         "schedule": crontab(day_of_month=1, hour=0, minute=30),

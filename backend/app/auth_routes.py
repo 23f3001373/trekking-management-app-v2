@@ -1,24 +1,4 @@
-"""
-auth_routes.py — Authentication Blueprint
-==========================================
-Handles all unauthenticated and session-management endpoints:
 
-  POST /api/auth/register  — Trekker self-registration
-  POST /api/auth/login     — All roles (returns role-scoped JWT)
-  POST /api/auth/refresh   — Issue a new access token using a refresh token
-  DELETE /api/auth/logout  — Client-side token invalidation guidance
-
-Design Decisions
------------------
-• JWT tokens are returned in the response body (not set-cookie) so the
-  Vue.js SPA can store them in memory (most secure) or localStorage
-  and attach them as `Authorization: Bearer <token>` headers.
-• Refresh tokens enable silent reauthentication without re-entering credentials.
-• Admin and Staff accounts cannot be created through this blueprint; they are
-  provisioned exclusively through the Admin panel (admin_routes.py).
-• Blacklisted accounts are refused login at the credential check stage with
-  HTTP 403 Forbidden (not 401) to distinguish "wrong password" from "banned".
-"""
 
 import uuid
 from datetime import datetime, timezone
@@ -37,51 +17,18 @@ from .extensions import database_extension as db
 from .models import PlatformUserAccount, UserPlatformRole
 from .schemas import TrekkerSelfRegistrationRequestSchema, UserLoginRequestSchema
 
-
-# --------------------------------------------------------------------------- #
-# Blueprint Declaration                                                         #
-# --------------------------------------------------------------------------- #
-# `url_prefix="/api/auth"` is applied at registration time in __init__.py,
-# so all routes here are relative to that prefix.
 authentication_blueprint = Blueprint(
     "authentication_blueprint",
     __name__,
     url_prefix="/api/auth"
 )
 
-# Schema instances are created once at module load, not on every request,
-# to avoid the overhead of repeated class instantiation.
 _trekker_registration_schema = TrekkerSelfRegistrationRequestSchema()
 _user_login_schema = UserLoginRequestSchema()
 
-
-# --------------------------------------------------------------------------- #
-# Route: POST /api/auth/register                                                #
-# --------------------------------------------------------------------------- #
-
 @authentication_blueprint.route("/register", methods=["POST"])
 def handle_trekker_self_registration():
-    """
-    Registers a brand-new Trekker account.
 
-    WHY only Trekkers can self-register?
-    Admin and Staff accounts hold elevated privileges that must be granted
-    deliberately by a trusted administrator. Allowing open registration for
-    those roles would be a critical privilege-escalation vulnerability.
-
-    Flow:
-      1. Validate request JSON against TrekkerSelfRegistrationRequestSchema.
-      2. Check that no account with the same email already exists (unique email).
-      3. Create a new PlatformUserAccount with role=TREKKER.
-      4. Hash and store the password via set_hashed_password().
-      5. Return the new account's safe public dict with HTTP 201 Created.
-
-    Returns:
-        201: Account created successfully; includes account details (no password).
-        400: Validation error — missing fields or constraint violations.
-        409: Email address already registered.
-    """
-    # ---- 1. Schema validation ---- #
     try:
         validated_registration_data = _trekker_registration_schema.load(
             request.get_json(force=True, silent=True) or {}
@@ -92,7 +39,6 @@ def handle_trekker_self_registration():
             "validation_errors": schema_validation_error.messages
         }), 400
 
-    # ---- 2. Email uniqueness check ---- #
     submitted_email = validated_registration_data["user_email_address"].lower().strip()
     existing_account_with_email = PlatformUserAccount.query.filter_by(
         user_email_address=submitted_email
@@ -105,7 +51,6 @@ def handle_trekker_self_registration():
             "error_code": "EMAIL_ALREADY_REGISTERED"
         }), 409
 
-    # ---- 3. Construct and persist the new account ---- #
     newly_created_trekker_account = PlatformUserAccount(
         user_full_name=validated_registration_data["user_full_name"].strip(),
         user_email_address=submitted_email,
@@ -115,7 +60,6 @@ def handle_trekker_self_registration():
         is_account_blacklisted=False,
     )
 
-    # 4. Hash the password — plaintext is discarded after this call.
     newly_created_trekker_account.set_hashed_password(
         validated_registration_data["raw_password"]
     )
@@ -134,39 +78,9 @@ def handle_trekker_self_registration():
         "account_details": newly_created_trekker_account.to_safe_public_dict()
     }), 201
 
-
-# --------------------------------------------------------------------------- #
-# Route: POST /api/auth/login                                                   #
-# --------------------------------------------------------------------------- #
-
 @authentication_blueprint.route("/login", methods=["POST"])
 def handle_user_login():
-    """
-    Authenticates a user of any role and returns a JWT access + refresh token pair.
 
-    The response payload includes the user's role so the Vue.js SPA can
-    immediately route to the correct dashboard (Admin/Staff/Trekker) without
-    a second API call.
-
-    The JWT identity is set to the user's email address (a stable, human-readable
-    unique identifier). The role is embedded as an additional claim so route
-    decorators can perform role checks without a DB lookup on every request.
-
-    Flow:
-      1. Validate login credentials via schema.
-      2. Look up the account by email.
-      3. Verify password hash.
-      4. Check for blacklist or deactivation.
-      5. Generate JWT access + refresh tokens with role claim.
-      6. Return tokens and account summary.
-
-    Returns:
-        200: Login successful; includes access_token, refresh_token, and user info.
-        400: Validation error on the request body.
-        401: Email not found or password incorrect (generic message prevents enumeration).
-        403: Account is blacklisted or deactivated.
-    """
-    # ---- 1. Validate the incoming credentials payload ---- #
     try:
         validated_login_credentials = _user_login_schema.load(
             request.get_json(force=True, silent=True) or {}
@@ -179,14 +93,10 @@ def handle_user_login():
 
     submitted_email = validated_login_credentials["user_email_address"].lower().strip()
 
-    # ---- 2. Look up account by email ---- #
     matched_user_account = PlatformUserAccount.query.filter_by(
         user_email_address=submitted_email
     ).first()
 
-    # ---- 3. Verify password (constant-time comparison via werkzeug) ---- #
-    # We use the same generic error for "not found" AND "wrong password" to
-    # prevent email enumeration attacks (attacker can't tell which one failed).
     if matched_user_account is None or not matched_user_account.verify_submitted_password(
         validated_login_credentials["submitted_password"]
     ):
@@ -196,7 +106,6 @@ def handle_user_login():
             "error_code": "INVALID_CREDENTIALS"
         }), 401
 
-    # ---- 4. Check account standing ---- #
     if matched_user_account.is_account_blacklisted:
         return jsonify({
             "login_failed": True,
@@ -211,9 +120,6 @@ def handle_user_login():
             "error_code": "ACCOUNT_DEACTIVATED"
         }), 403
 
-    # ---- 5. Generate JWT token pair ---- #
-    # `additional_claims` embeds the role and account ID directly in the token payload.
-    # Route decorators can read these without hitting the database, improving performance.
     jwt_additional_claims = {
         "platform_role": matched_user_account.assigned_platform_role.value,
         "user_account_id": matched_user_account.user_account_id,
@@ -241,36 +147,14 @@ def handle_user_login():
         "authenticated_user": matched_user_account.to_safe_public_dict()
     }), 200
 
-
-# --------------------------------------------------------------------------- #
-# Route: POST /api/auth/refresh and /api/auth/refresh-token                     #
-# --------------------------------------------------------------------------- #
-
 @authentication_blueprint.route("/refresh", methods=["POST"])
 @authentication_blueprint.route("/refresh-token", methods=["POST"])
-@jwt_required(refresh=True)  # Requires a valid REFRESH token (not an access token).
+@jwt_required(refresh=True)
 def handle_access_token_refresh():
-    """
-    Issues a new short-lived access token using a valid refresh token.
 
-    This enables "silent refresh" in the SPA: when an API call returns 401
-    TOKEN_EXPIRED, the Vue.js auth interceptor automatically sends the
-    refresh token to this endpoint and retries the original request with the
-    new access token — the user never sees a login page.
-
-    The refresh token itself is NOT rotated here for simplicity. In a production
-    system, consider implementing refresh token rotation (single-use refresh tokens)
-    to limit replay-attack exposure.
-
-    Returns:
-        200: New access token issued successfully.
-        401: Refresh token is expired or invalid.
-    """
     requesting_user_email = get_jwt_identity()
     existing_jwt_claims = get_jwt()
 
-    # Re-fetch the account to ensure it hasn't been blacklisted since the
-    # refresh token was originally issued (a token can outlive a ban decision).
     current_user_account = PlatformUserAccount.query.filter_by(
         user_email_address=requesting_user_email
     ).first()
@@ -299,26 +183,10 @@ def handle_access_token_refresh():
         "new_access_token": new_access_token
     }), 200
 
-
-# --------------------------------------------------------------------------- #
-# Route: GET /api/auth/me                                                       #
-# --------------------------------------------------------------------------- #
-
 @authentication_blueprint.route("/me", methods=["GET"])
 @jwt_required()
 def handle_get_current_user_profile():
-    """
-    Returns the full profile of the currently authenticated user.
 
-    The Vue.js SPA calls this on page load (after finding a stored token)
-    to rehydrate the user's state (name, role, profile fields) without
-    forcing a re-login. The JWT provides identity; this route provides the
-    fresh DB record.
-
-    Returns:
-        200: Current user's safe public profile dict.
-        404: JWT identity doesn't match any account (edge case — account deleted post-login).
-    """
     requesting_user_email = get_jwt_identity()
     current_user_account = PlatformUserAccount.query.filter_by(
         user_email_address=requesting_user_email
@@ -334,35 +202,19 @@ def handle_get_current_user_profile():
         "current_user_profile": current_user_account.to_safe_public_dict()
     }), 200
 
-
-# --------------------------------------------------------------------------- #
-# Route: DELETE /api/auth/logout                                                #
-# --------------------------------------------------------------------------- #
-
 @authentication_blueprint.route("/logout", methods=["DELETE"])
 @jwt_required()
 def handle_user_logout():
-    """
-    Logs out the current user. Since we use stateless JWTs, we simply return
-    success to the client so it can discard the tokens from memory/storage.
-    """
+
     return jsonify({
         "logout_successful": True,
         "message": "Logged out successfully."
     }), 200
 
-
-# --------------------------------------------------------------------------- #
-# Route: PATCH /api/auth/update-profile                                         #
-# --------------------------------------------------------------------------- #
-
 @authentication_blueprint.route("/update-profile", methods=["PATCH"])
 @jwt_required()
 def handle_update_profile():
-    """
-    Updates the profile details of the currently authenticated user.
-    Only allows updating specific non-sensitive fields.
-    """
+
     requesting_user_email = get_jwt_identity()
     current_user_account = PlatformUserAccount.query.filter_by(
         user_email_address=requesting_user_email
@@ -373,7 +225,7 @@ def handle_update_profile():
 
     request_data = request.get_json(force=True, silent=True) or {}
     
-    # Update optional profile fields
+    # check credentials
     if "user_full_name" in request_data:
         name = request_data["user_full_name"].strip()
         if len(name) >= 2:
@@ -397,18 +249,12 @@ def handle_update_profile():
         "updated_user_profile": current_user_account.to_safe_public_dict()
     }), 200
 
-
-# --------------------------------------------------------------------------- #
-# Route: PATCH /api/auth/change-password                                         #
-# --------------------------------------------------------------------------- #
+# query db
 
 @authentication_blueprint.route("/change-password", methods=["PATCH"])
 @jwt_required()
 def handle_change_password():
-    """
-    Changes the password of the currently authenticated user after verifying
-    their current password.
-    """
+
     requesting_user_email = get_jwt_identity()
     current_user_account = PlatformUserAccount.query.filter_by(
         user_email_address=requesting_user_email
@@ -427,7 +273,6 @@ def handle_change_password():
     if not current_user_account.verify_submitted_password(current_password):
         return jsonify({"error": "Incorrect current password."}), 400
 
-    # Password complexity checks (matching the frontend constraints)
     if len(new_password) < 8 or not any(c.isupper() for c in new_password) or not any(c.isdigit() for c in new_password) or not any(not c.isalnum() for c in new_password):
         return jsonify({"error": "New password does not meet security requirements."}), 400
 

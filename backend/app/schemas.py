@@ -1,31 +1,4 @@
-"""
-schemas.py — Marshmallow Serialisation & Validation Schemas
-============================================================
-This module defines all request/response schemas for the Trekking Management
-Platform API. Marshmallow serves dual purposes here:
 
-  VALIDATION (inbound):  Parses and validates raw JSON request bodies before
-                         any data touches the database. Invalid data is rejected
-                         at the schema boundary with descriptive error messages,
-                         so route handlers only ever see clean, type-coerced data.
-
-  SERIALISATION (outbound): Converts SQLAlchemy model instances to JSON-safe
-                            dicts with field inclusion/exclusion rules.
-
-WHY Marshmallow over raw `request.json` access?
-------------------------------------------------
-  • Auto type coercion: "2026-01-15" string → Python `date` object.
-  • `required=True` / `validate=` decorators keep validation DRY.
-  • `dump_only` / `load_only` clearly separate readable vs. writeable fields.
-  • Error messages are structured dicts — the Vue.js frontend can map them
-    directly onto form field error displays.
-
-Schema Naming Convention
-------------------------
-All schema classes end in `Schema`. Schemas used exclusively to validate
-incoming request payloads use the suffix `RequestSchema`. Schemas used for
-outbound serialisation use `ResponseSchema`. Schemas that do both omit the suffix.
-"""
 
 from marshmallow import (
     Schema,
@@ -40,29 +13,8 @@ from marshmallow import (
 import re
 from datetime import date
 
-
-# =========================================================================== #
-#  SHARED VALIDATORS                                                            #
-#  Reusable validator lambdas and functions referenced by multiple schemas.     #
-# =========================================================================== #
-
 def _validate_strong_password(raw_password_value: str) -> None:
-    """
-    Enforces a password strength policy:
-      • Minimum 8 characters.
-      • At least one uppercase letter.
-      • At least one digit.
-      • At least one special character from the allowed set.
 
-    This is applied on REGISTRATION and PASSWORD RESET payloads only.
-    Login uses raw comparison via werkzeug — no re-validation needed.
-
-    Args:
-        raw_password_value: The candidate password string from the request body.
-
-    Raises:
-        ValidationError: If any strength requirement is not met.
-    """
     if len(raw_password_value) < 8:
         raise ValidationError("Password must be at least 8 characters long.")
     if not re.search(r"[A-Z]", raw_password_value):
@@ -72,7 +24,6 @@ def _validate_strong_password(raw_password_value: str) -> None:
     if not re.search(r"[!@#$%^&*(),.?\":{}|<>_\-]", raw_password_value):
         raise ValidationError("Password must contain at least one special character.")
 
-
 _email_validator = validate.Email(error="A valid email address is required.")
 
 _phone_validator = validate.Regexp(
@@ -80,25 +31,10 @@ _phone_validator = validate.Regexp(
     error="Phone number must be 7–20 digits and may include +, spaces, dashes, or parentheses."
 )
 
-
-# =========================================================================== #
-#  SECTION 1 — Authentication Schemas                                           #
-# =========================================================================== #
-
 class TrekkerSelfRegistrationRequestSchema(Schema):
-    """
-    Validates the JSON body for the Trekker self-registration endpoint
-    (POST /api/auth/register).
 
-    Only Trekkers may self-register. Admin and Staff accounts are created
-    exclusively by the Admin via the admin dashboard — there is no public
-    registration endpoint for those roles.
-
-    `unknown = EXCLUDE` silently drops any extra keys the client sends,
-    preventing accidental mass-assignment vulnerabilities.
-    """
     class Meta:
-        unknown = EXCLUDE  # Drop unknown fields; don't raise an error.
+        unknown = EXCLUDE
 
     user_full_name = fields.Str(
         required=True,
@@ -114,7 +50,7 @@ class TrekkerSelfRegistrationRequestSchema(Schema):
 
     raw_password = fields.Str(
         required=True,
-        load_only=True,   # Never serialise the password back in any response.
+        load_only=True,
         validate=_validate_strong_password,
         metadata={"description": "Must be ≥8 chars with uppercase, digit, and special char."}
     )
@@ -126,14 +62,8 @@ class TrekkerSelfRegistrationRequestSchema(Schema):
         load_default=None,
     )
 
-
-
 class UserLoginRequestSchema(Schema):
-    """
-    Validates the JSON body for the login endpoint (POST /api/auth/login).
-    Used by ALL roles (Admin, Staff, Trekker). The route handler determines
-    the role after credential verification to return the correct dashboard URL.
-    """
+
     class Meta:
         unknown = EXCLUDE
 
@@ -148,15 +78,8 @@ class UserLoginRequestSchema(Schema):
         validate=validate.Length(min=1, error="Password cannot be empty."),
     )
 
-
 class PasswordChangeRequestSchema(Schema):
-    """
-    Validates the JSON body for authenticated password-change requests
-    (PUT /api/trekker/profile/password).
 
-    Requires the current password for verification (prevents a session-hijack
-    attacker from silently changing the password if they steal a token).
-    """
     class Meta:
         unknown = EXCLUDE
 
@@ -169,26 +92,15 @@ class PasswordChangeRequestSchema(Schema):
 
     @validates_schema
     def validate_passwords_are_different(self, incoming_data, **kwargs):
-        """Prevents a user from 'changing' their password to the same value."""
+
         if incoming_data.get("current_password") == incoming_data.get("new_password"):
             raise ValidationError(
                 "New password must be different from the current password.",
                 field_name="new_password"
             )
 
-
-# =========================================================================== #
-#  SECTION 2 — User Account Schemas                                             #
-# =========================================================================== #
-
 class TrekkerProfileUpdateRequestSchema(Schema):
-    """
-    Validates partial profile updates from a Trekker (PATCH /api/trekker/profile).
 
-    All fields are optional — the client sends only what changed. The route
-    handler merges the validated dict with the existing model attributes.
-    `allow_none=True` lets the client explicitly clear optional fields.
-    """
     class Meta:
         unknown = EXCLUDE
 
@@ -217,12 +129,8 @@ class TrekkerProfileUpdateRequestSchema(Schema):
         load_default=None,
     )
 
-
 class AdminCreateStaffAccountRequestSchema(Schema):
-    """
-    Validates the Admin's request to create a new Staff account
-    (POST /api/admin/staff). Staff accounts cannot self-register.
-    """
+
     class Meta:
         unknown = EXCLUDE
 
@@ -242,20 +150,8 @@ class AdminCreateStaffAccountRequestSchema(Schema):
         load_default=None,
     )
 
-
-# =========================================================================== #
-#  SECTION 3 — Trek / Expedition Schemas                                        #
-# =========================================================================== #
-
 class ExpeditionCreateRequestSchema(Schema):
-    """
-    Validates the Admin's request to create a new trekking route expedition
-    (POST /api/admin/expeditions).
 
-    Both `total_participant_slots_capacity` and `available_participant_slots_remaining`
-    are accepted at creation time (they should be equal for a new expedition).
-    The route handler enforces this equality as a business rule.
-    """
     class Meta:
         unknown = EXCLUDE
 
@@ -322,13 +218,7 @@ class ExpeditionCreateRequestSchema(Schema):
 
     @validates_schema
     def validate_date_ordering(self, incoming_data, **kwargs):
-        """
-        Ensures date fields are logically ordered:
-          booking_cutoff ≤ start_date ≤ end_date
 
-        This cross-field validation cannot be expressed with per-field
-        validators since it requires comparing multiple values simultaneously.
-        """
         start = incoming_data.get("expedition_scheduled_start_date")
         end = incoming_data.get("expedition_scheduled_end_date")
         cutoff = incoming_data.get("expedition_booking_cutoff_date")
@@ -344,16 +234,8 @@ class ExpeditionCreateRequestSchema(Schema):
                 field_name="expedition_booking_cutoff_date"
             )
 
-
 class ExpeditionUpdateRequestSchema(Schema):
-    """
-    Validates partial updates to an existing expedition by Admin
-    (PATCH /api/admin/expeditions/<id>).
 
-    All fields are optional; only provided fields are updated.
-    Slot capacity reductions are rejected if they would go below
-    the number of active bookings — this check happens in the route handler.
-    """
     class Meta:
         unknown = EXCLUDE
 
@@ -394,16 +276,8 @@ class ExpeditionUpdateRequestSchema(Schema):
         load_default=None,
     )
 
-
 class StaffExpeditionStatusUpdateRequestSchema(Schema):
-    """
-    Validates a Staff member's targeted update to an expedition's status
-    and/or available slot count (PATCH /api/staff/expeditions/<id>/status).
 
-    Staff can only change status within the permitted transition set:
-      Open → Closed, Closed → Open, Open → Completed.
-    Route handler enforces the transition rules after schema validation.
-    """
     class Meta:
         unknown = EXCLUDE
 
@@ -421,21 +295,10 @@ class StaffExpeditionStatusUpdateRequestSchema(Schema):
         load_default=None,
     )
 
-
-# =========================================================================== #
-#  SECTION 4 — Booking Schemas                                                  #
-# =========================================================================== #
+# check credentials
 
 class NewParticipantBookingRequestSchema(Schema):
-    """
-    Validates a Trekker's request to create a new expedition booking
-    (POST /api/trekker/bookings).
 
-    The `booked_expedition_instance_id` is the only required field —
-    everything else is optional metadata attached to the booking.
-    Slot availability is checked in the route handler (not here) because
-    it requires a database query against live state.
-    """
     class Meta:
         unknown = EXCLUDE
 
@@ -455,12 +318,8 @@ class NewParticipantBookingRequestSchema(Schema):
         load_default=None,
     )
 
-
 class BookingCancellationRequestSchema(Schema):
-    """
-    Validates the optional cancellation reason a trekker provides when
-    cancelling their own booking (PATCH /api/trekker/bookings/<id>/cancel).
-    """
+
     class Meta:
         unknown = EXCLUDE
 
@@ -471,19 +330,10 @@ class BookingCancellationRequestSchema(Schema):
         load_default=None,
     )
 
-
-# =========================================================================== #
-#  SECTION 5 — Filter / Query Parameter Schemas                                 #
-# =========================================================================== #
+# query db
 
 class OpenExpeditionFilterQuerySchema(Schema):
-    """
-    Validates and coerces query parameters for the open expeditions listing
-    endpoint (GET /api/trekker/expeditions/open).
 
-    All fields are optional — omitting them returns the full unfiltered list.
-    This schema is applied to `request.args` (URL query string), not JSON body.
-    """
     class Meta:
         unknown = EXCLUDE
 

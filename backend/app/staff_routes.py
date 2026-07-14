@@ -1,25 +1,4 @@
-"""
-staff_routes.py — Trek Staff Operations Blueprint
-==================================================
-All endpoints under `/api/staff/*` are accessible only to authenticated users
-holding the `platform_role == "Staff"` JWT claim. The `require_staff_role`
-decorator enforces this at the route level.
 
-Staff Role Responsibilities
-----------------------------
-  1. VIEW assigned expeditions only (not the full platform catalog).
-  2. UPDATE expedition status within permitted transitions:
-       Open → Closed, Closed → Open, Open/Closed → Completed.
-  3. ADJUST available_participant_slots_remaining for operational corrections
-     (e.g., a participant dropped out without formally cancelling their booking).
-  4. VIEW the registered participant list for their assigned expeditions.
-
-WHY strict assignment scoping?
-Staff members should only see and operate on expeditions they are responsible
-for. Cross-expedition data access would be a data-leak risk if a staff member's
-account were compromised. The `assigned_staff_leader_id == current_user_id`
-check on every query is the enforcement mechanism.
-"""
 
 from functools import wraps
 
@@ -38,10 +17,6 @@ from .models import (
 )
 from .schemas import StaffExpeditionStatusUpdateRequestSchema
 
-
-# --------------------------------------------------------------------------- #
-# Blueprint Declaration                                                         #
-# --------------------------------------------------------------------------- #
 staff_operations_blueprint = Blueprint(
     "staff_operations_blueprint",
     __name__,
@@ -50,8 +25,6 @@ staff_operations_blueprint = Blueprint(
 
 _staff_status_update_schema = StaffExpeditionStatusUpdateRequestSchema()
 
-# Valid status transitions a staff member is allowed to make.
-# Admin can do broader transitions; staff is limited to operational changes.
 STAFF_PERMITTED_STATUS_TRANSITIONS = {
     ExpeditionLifecycleStatus.OPEN: [
         ExpeditionLifecycleStatus.CLOSED,
@@ -63,23 +36,8 @@ STAFF_PERMITTED_STATUS_TRANSITIONS = {
     ],
 }
 
-
-# --------------------------------------------------------------------------- #
-# RBAC Decorator — Staff Role Guard                                             #
-# --------------------------------------------------------------------------- #
-
 def require_staff_role(route_handler_function):
-    """
-    Decorator that enforces Staff-only access on routes it wraps.
 
-    Applied after `@jwt_required()` to form a two-layer auth check:
-      1. JWT present and valid?
-      2. JWT role claim == "Staff"?
-
-    Note: Admin accounts intentionally do NOT pass this check. If the Admin
-    needs to view staff-facing data, they should use the admin blueprint endpoints.
-    This separation ensures the two dashboards remain distinct and testable.
-    """
     @wraps(route_handler_function)
     def staff_role_enforcement_wrapper(*args, **kwargs):
         incoming_jwt_claims = get_jwt()
@@ -91,43 +49,15 @@ def require_staff_role(route_handler_function):
         return route_handler_function(*args, **kwargs)
     return staff_role_enforcement_wrapper
 
-
-# --------------------------------------------------------------------------- #
-# Utility: Get Current Staff Account ID from JWT                                #
-# --------------------------------------------------------------------------- #
-
 def _extract_current_staff_account_id_from_jwt() -> int:
-    """
-    Extracts and returns the `user_account_id` integer from the current
-    request's JWT claims.
 
-    This is called at the start of every staff route to determine which
-    expeditions the authenticated staff member is authorised to access.
-    All queries are then filtered by `assigned_staff_leader_id == this value`.
-
-    Returns:
-        int: The authenticated staff member's user_account_id.
-    """
     return get_jwt().get("user_account_id")
-
-
-# =========================================================================== #
-#  STAFF DASHBOARD                                                              #
-# =========================================================================== #
 
 @staff_operations_blueprint.route("/dashboard/summary", methods=["GET"])
 @jwt_required()
 @require_staff_role
 def handle_staff_dashboard_summary_retrieval():
-    """
-    Returns a summary of the staff member's current operational workload.
 
-    Provides counts of their assigned expeditions by status — allowing the
-    dashboard to show quick-glance badges like "2 Open, 1 Pending Completion".
-
-    Returns:
-        200: Dict of expedition status counts and staff profile summary.
-    """
     current_staff_id = _extract_current_staff_account_id_from_jwt()
 
     assigned_expeditions_by_status = {}
@@ -159,27 +89,11 @@ def handle_staff_dashboard_summary_retrieval():
         }
     }), 200
 
-
-# =========================================================================== #
-#  STAFF — VIEW ASSIGNED EXPEDITIONS                                            #
-# =========================================================================== #
-
 @staff_operations_blueprint.route("/assigned-expeditions", methods=["GET"])
 @jwt_required()
 @require_staff_role
 def handle_list_staff_assigned_expeditions():
-    """
-    Returns all expeditions currently assigned to the authenticated staff member.
 
-    Scoped strictly to `assigned_staff_leader_id == current_staff_id` —
-    staff cannot query other staff members' expeditions.
-
-    Query Parameters:
-        status_filter (str): Optional. Filter by lifecycle status.
-
-    Returns:
-        200: List of expedition summary dicts assigned to this staff member.
-    """
     current_staff_id = _extract_current_staff_account_id_from_jwt()
     status_filter_value = request.args.get("status_filter", None)
 
@@ -208,11 +122,6 @@ def handle_list_staff_assigned_expeditions():
         "total_assigned_count": len(assigned_expeditions)
     }), 200
 
-
-# =========================================================================== #
-#  STAFF — UPDATE EXPEDITION STATUS & SLOTS                                     #
-# =========================================================================== #
-
 @staff_operations_blueprint.route(
     "/assigned-expeditions/<int:expedition_record_id>/operational-update",
     methods=["PATCH"]
@@ -220,37 +129,9 @@ def handle_list_staff_assigned_expeditions():
 @jwt_required()
 @require_staff_role
 def handle_staff_expedition_operational_update(expedition_record_id: int):
-    """
-    Allows a staff member to update the status and/or available slot count
-    of an expedition they are assigned to.
 
-    Status Transition Rules (enforced here, not in the schema):
-      OPEN    → CLOSED     (booking window closed)
-      OPEN    → COMPLETED  (trek finished)
-      CLOSED  → OPEN       (re-open for last-minute bookings)
-      CLOSED  → COMPLETED  (trek finished from closed state)
-
-    Staff CANNOT:
-      • Transition to PENDING or APPROVED (admin-only gates)
-      • Transition to CANCELLED (admin-only)
-      • Update expeditions they are NOT assigned to
-
-    Slot Adjustment Logic:
-      Staff can manually correct `available_participant_slots_remaining` to
-      handle real-world discrepancies (e.g., a trekker's physical no-show
-      that wasn't formally cancelled in the system). The adjusted value cannot
-      exceed `total_participant_slots_capacity`.
-
-    Returns:
-        200: Updated expedition summary dict.
-        400: Validation error.
-        403: Staff member is not assigned to this expedition.
-        404: Expedition not found.
-        409: Invalid status transition attempted.
-    """
     current_staff_id = _extract_current_staff_account_id_from_jwt()
 
-    # --- Ownership verification: ensure this expedition belongs to this staff ---
     target_expedition = TrekkingRouteExpedition.query.filter_by(
         trekking_route_expedition_id=expedition_record_id,
         assigned_staff_leader_id=current_staff_id
@@ -269,7 +150,6 @@ def handle_staff_expedition_operational_update(expedition_record_id: int):
     except ValidationError as schema_error:
         return jsonify({"validation_errors": schema_error.messages}), 400
 
-    # --- Status transition validation ---
     requested_new_status_str = validated_operational_update.get("current_expedition_lifecycle_status")
     if requested_new_status_str:
         requested_new_status = ExpeditionLifecycleStatus(requested_new_status_str)
@@ -289,7 +169,6 @@ def handle_staff_expedition_operational_update(expedition_record_id: int):
 
         target_expedition.current_expedition_lifecycle_status = requested_new_status
 
-        # If marked COMPLETED, also mark all BOOKED records as COMPLETED.
         if requested_new_status == ExpeditionLifecycleStatus.COMPLETED:
             active_bookings_to_complete = (
                 target_expedition.registered_participant_bookings
@@ -303,7 +182,6 @@ def handle_staff_expedition_operational_update(expedition_record_id: int):
                 f"Marked {len(active_bookings_to_complete)} bookings as COMPLETED."
             )
 
-    # --- Available slot adjustment ---
     if validated_operational_update.get("available_participant_slots_remaining") is not None:
         adjusted_slot_count = validated_operational_update["available_participant_slots_remaining"]
         if adjusted_slot_count > target_expedition.total_participant_slots_capacity:
@@ -318,7 +196,6 @@ def handle_staff_expedition_operational_update(expedition_record_id: int):
 
     db.session.commit()
 
-    # Invalidate cache — a slot count or status change affects what trekkers see.
     try:
         redis_client = cache.cache._write_client
         prefix = current_app.config.get("CACHE_KEY_PREFIX_OPEN_TREKS", "trek_platform:open_treks:")
@@ -333,11 +210,6 @@ def handle_staff_expedition_operational_update(expedition_record_id: int):
         "updated_expedition": target_expedition.to_public_summary_dict()
     }), 200
 
-
-# =========================================================================== #
-#  STAFF — VIEW PARTICIPANT LIST                                                 #
-# =========================================================================== #
-
 @staff_operations_blueprint.route(
     "/assigned-expeditions/<int:expedition_record_id>/participants",
     methods=["GET"]
@@ -345,23 +217,7 @@ def handle_staff_expedition_operational_update(expedition_record_id: int):
 @jwt_required()
 @require_staff_role
 def handle_get_participant_list_for_assigned_expedition(expedition_record_id: int):
-    """
-    Returns the list of registered participants for a specific expedition
-    that the authenticated staff member is assigned to.
 
-    This is the operational roster — staff use it to prepare participant
-    kits, track headcount at assembly points, and verify special requirements.
-    Only BOOKED (confirmed) participants are returned by default; include
-    `show_all_statuses=true` query param to also see cancelled records.
-
-    Query Parameters:
-        show_all_statuses (bool): Default false. If true, include cancelled participants.
-
-    Returns:
-        200: Participant roster with booking detail dicts.
-        403: Not assigned to this expedition.
-        404: Expedition not found.
-    """
     current_staff_id = _extract_current_staff_account_id_from_jwt()
 
     target_expedition = TrekkingRouteExpedition.query.filter_by(
@@ -380,7 +236,6 @@ def handle_get_participant_list_for_assigned_expedition(expedition_record_id: in
     participant_booking_query = target_expedition.registered_participant_bookings
 
     if not show_all_statuses:
-        # By default, show only confirmed (BOOKED) participants for the roster.
         participant_booking_query = participant_booking_query.filter_by(
             current_booking_lifecycle_status=BookingLifecycleStatus.BOOKED
         )

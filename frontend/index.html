@@ -24,13 +24,7 @@
     rel="stylesheet" />
 
   <style>
-    /* ================================================================
-       TREKKING PLATFORM V2 — GLOBAL DESIGN SYSTEM
-       ================================================================
-       All custom tokens and overrides live here. Bootstrap utilities
-       handle layout; this sheet handles the premium dark-forest theme,
-       glassmorphism cards, and micro-animations.
-    ================================================================ */
+    
 
     :root {
       /* --- Color Palette: Deep Forest / Himalayan Dusk --- */
@@ -83,9 +77,7 @@
       --trek-transition:   all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
-    /* ============================================================
-       BASE RESET & BODY
-    ============================================================ */
+    
     *,
     *::before,
     *::after {
@@ -108,9 +100,7 @@
         radial-gradient(ellipse at 50% 50%, rgba(255, 213, 79, 0.03) 0%, transparent 70%);
     }
 
-    /* ============================================================
-       SCROLLBAR STYLING
-    ============================================================ */
+    
     ::-webkit-scrollbar {
       width: 6px;
     }
@@ -128,9 +118,7 @@
       background: var(--trek-primary);
     }
 
-    /* ============================================================
-       NAVIGATION BAR
-    ============================================================ */
+    
     #trek-navbar {
       background: rgba(13, 26, 13, 0.92) !important;
       backdrop-filter: blur(20px);
@@ -173,9 +161,7 @@
       background: var(--trek-primary-glow);
     }
 
-    /* ============================================================
-       SIDEBAR (Dashboard Navigation)
-    ============================================================ */
+    
     #trek-sidebar {
       width: 260px;
       min-height: calc(100vh - 64px);
@@ -255,9 +241,7 @@
       }
     }
 
-    /* ============================================================
-       MAIN CONTENT AREA
-    ============================================================ */
+    
     #trek-main-content {
       margin-left: 260px;
       padding: 2rem;
@@ -272,9 +256,7 @@
       }
     }
 
-    /* ============================================================
-       AUTH PAGES (Login / Register)
-    ============================================================ */
+    
     #auth-container {
       min-height: 100vh;
       display: flex;
@@ -333,9 +315,7 @@
       font-size: 0.88rem;
     }
 
-    /* ============================================================
-       METRIC CARDS (Dashboard)
-    ============================================================ */
+    
     .metric-card {
       background: var(--trek-gradient-card);
       border: 1px solid rgba(76, 175, 80, 0.12);
@@ -415,9 +395,7 @@
       font-weight: 600;
     }
 
-    /* ============================================================
-       TREK EXPEDITION CARDS
-    ============================================================ */
+    
     .trek-card {
       background: var(--trek-gradient-card);
       border: 1px solid rgba(76, 175, 80, 0.1);
@@ -543,9 +521,7 @@
       transition: width 0.5s ease;
     }
 
-    /* ============================================================
-       FORM CONTROLS — Custom dark theme override
-    ============================================================ */
+    
     .form-control,
     .form-select {
       background-color: var(--trek-surface) !important;
@@ -587,9 +563,7 @@
       border-color: var(--trek-primary) !important;
     }
 
-    /* ============================================================
-       BUTTONS — Premium design
-    ============================================================ */
+    
     .btn-trek-primary {
       background: var(--trek-gradient-accent);
       border: none;
@@ -658,9 +632,7 @@
       color: #fff;
     }
 
-    /* ============================================================
-       TABLES — Premium dark styling
-    ============================================================ */
+    
     .trek-table {
       width: 100%;
       border-collapse: separate;
@@ -695,9 +667,7 @@
       vertical-align: middle;
     }
 
-    /* ============================================================
-       BADGES — Custom difficulty and status
-    ============================================================ */
+    
     .badge-easy {
       background: rgba(76, 175, 80, 0.2);
       color: #81c784;
@@ -757,9 +727,7 @@
       display: inline-block;
     }
 
-    /* ============================================================
-       MODALS — Custom dark theme
-    ============================================================ */
+    
     .modal-content {
       background: var(--trek-bg-card) !important;
       border: 1px solid rgba(76, 175, 80, 0.2) !important;
@@ -785,9 +753,7 @@
       filter: invert(1) brightness(0.7);
     }
 
-    /* ============================================================
-       TOAST NOTIFICATIONS
-    ============================================================ */
+    
     #trek-toast-container {
       position: fixed;
       top: 80px;
@@ -867,9 +833,7 @@
       flex-shrink: 0;
     }
 
-    /* ============================================================
-       CHART.JS CONTAINER
-    ============================================================ */
+    
     .chart-card {
       background: var(--trek-gradient-card);
       border: 1px solid rgba(76, 175, 80, 0.12);
@@ -889,9 +853,7 @@
       margin-right: 6px;
     }
 
-    /* ============================================================
-       SECTION HEADERS
-    ============================================================ */
+    
     .section-header {
       display: flex;
       align-items: center;
@@ -912,9 +874,7 @@
       color: var(--trek-primary);
     }
 
-    /* ============================================================
-       FILTER BAR
-    ============================================================ */
+    
     .filter-bar {
       background: var(--trek-gradient-card);
       border: 1px solid rgba(76, 175, 80, 0.1);
@@ -923,9 +883,7 @@
       margin-bottom: 1.5rem;
     }
 
-    /* ============================================================
-       PAYMENT SIMULATION MODAL
-    ============================================================ */
+    
     .payment-card-preview {
       background: linear-gradient(135deg, #1b3a2b, #0d2a1d);
       border: 1px solid rgba(76, 175, 80, 0.25);
@@ -963,9 +921,7 @@
       height: 80px;
     }
 
-    /* ============================================================
-       HERO SECTION (Landing / Trekker Home)
-    ============================================================ */
+    
     .dashboard-hero {
       background: var(--trek-gradient-hero);
       border: 1px solid rgba(76, 175, 80, 0.15);
@@ -1017,9 +973,7 @@
       letter-spacing: 0.5px;
     }
 
-    /* ============================================================
-       LOADING SPINNER
-    ============================================================ */
+    
     .trek-spinner-overlay {
       position: fixed;
       inset: 0;
@@ -1040,9 +994,7 @@
       animation: spin 0.8s linear infinite;
     }
 
-    /* ============================================================
-       ANIMATIONS
-    ============================================================ */
+    
     @keyframes fadeSlideUp {
       from {
         opacity: 0;
@@ -1105,9 +1057,7 @@
       animation: countUp 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
     }
 
-    /* ============================================================
-       MISC UTILITIES
-    ============================================================ */
+    
     .glass-panel {
       background: var(--trek-bg-glass);
       backdrop-filter: blur(16px);
@@ -1150,9 +1100,7 @@
       font-size: 0.95rem;
     }
 
-    /* ============================================================
-       RESPONSIVE TWEAKS
-    ============================================================ */
+    
     @media (max-width: 575.98px) {
       .auth-card {
         padding: 1.75rem;
@@ -1176,9 +1124,7 @@
       }
     }
 
-    /* ============================================================
-       PRINT STYLES (for PDF reports)
-    ============================================================ */
+    
     @media print {
 
       #trek-navbar,
@@ -1196,9 +1142,7 @@
       }
     }
 
-    /* ============================================================
-       PROFILE AVATAR
-    ============================================================ */
+    
     .avatar-circle {
       width: 44px;
       height: 44px;
@@ -1227,9 +1171,7 @@
       color: #fff;
     }
 
-    /* ============================================================
-       PASSWORD STRENGTH INDICATOR
-    ============================================================ */
+    
     .password-strength-bar {
       height: 4px;
       border-radius: 2px;
@@ -1264,22 +1206,35 @@
       font-weight: 600;
       margin-top: 3px;
     }
+
+    [v-cloak] {
+      display: none !important;
+    }
+
+    #app-preloader {
+      position: fixed;
+      inset: 0;
+      background: #0d1a0d;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      transition: opacity 0.3s ease;
+    }
   </style>
 </head>
 
 <body>
 
-  <!-- ================================================================
-     TOAST NOTIFICATION CONTAINER
-     Toasts are injected here by the Vue global toast system.
-================================================================ -->
+  <div id="app-preloader">
+    <div class="trek-spinner mb-3"></div>
+    <p style="font-size:0.85rem;color:var(--trek-text-secondary);font-weight:500;">Loading TrekVista...</p>
+  </div>
+
   <div id="trek-toast-container"></div>
 
-  <!-- ================================================================
-     VUE 3 APPLICATION MOUNT POINT
-     The entire SPA renders inside #trek-app.
-================================================================ -->
-  <div id="trek-app">
+  <div id="trek-app" v-cloak>
 
     <!-- Global loading overlay — shown during API calls -->
     <div class="trek-spinner-overlay" v-if="globalLoadingState">
@@ -1291,9 +1246,7 @@
       </div>
     </div>
 
-    <!-- ============================================================
-       AUTH VIEWS: Login & Register
-  ============================================================ -->
+    
     <div v-if="!authenticatedUserSession" id="auth-container">
 
       <!-- LOGIN FORM -->
@@ -1466,14 +1419,10 @@
 
     </div> <!-- /auth-container -->
 
-    <!-- ============================================================
-       AUTHENTICATED DASHBOARD LAYOUT
-  ============================================================ -->
+    
     <div v-else>
 
-      <!-- ========================================================
-         TOP NAVIGATION BAR
-    ======================================================== -->
+      
       <nav class="navbar navbar-expand-lg fixed-top" id="trek-navbar">
         <div class="container-fluid px-3">
 
@@ -1559,9 +1508,7 @@
       <!-- Sidebar overlay (mobile) -->
       <div id="sidebar-overlay" :class="{ visible: sidebarOpen }" @click="toggleSidebar"></div>
 
-      <!-- ========================================================
-         SIDEBAR NAVIGATION
-    ======================================================== -->
+      
       <nav id="trek-sidebar" :class="{ 'sidebar-open': sidebarOpen }">
         <div class="pt-4">
 
@@ -1643,14 +1590,10 @@
         </div>
       </nav>
 
-      <!-- ========================================================
-         MAIN CONTENT AREA — Dynamic Views
-    ======================================================== -->
+      
       <main id="trek-main-content" style="padding-top: 80px;">
 
-        <!-- ====================================================
-           ADMIN: DASHBOARD
-      ==================================================== -->
+        
         <div v-if="currentView === 'admin-dashboard'" class="animate-in">
           <div class="dashboard-hero">
             <div class="hero-badge"><i class="bi bi-shield-check me-1"></i>Administrator</div>
@@ -1753,9 +1696,7 @@
           </div>
         </div>
 
-        <!-- ====================================================
-           ADMIN: EXPEDITIONS LIST
-      ==================================================== -->
+        
         <div v-if="currentView === 'admin-expeditions'" class="animate-in">
           <div class="section-header">
             <h2 class="section-title">All <span>Expeditions</span></h2>
@@ -1845,9 +1786,7 @@
           </div>
         </div>
 
-        <!-- ====================================================
-           ADMIN: CREATE EXPEDITION FORM
-      ==================================================== -->
+        
         <div v-if="currentView === 'admin-create-expedition'" class="animate-in">
           <div class="section-header">
             <h2 class="section-title">Create <span>Expedition</span></h2>
@@ -1929,9 +1868,18 @@
                   </select>
                 </div>
                 <div class="col-md-4">
-                  <label class="form-label">Cover Image URL</label>
-                  <input type="url" class="form-control" v-model="expeditionFormData.expedition_cover_image_url"
-                    placeholder="https://..." />
+                  <label class="form-label">Cover Image</label>
+                  <div class="d-flex gap-2">
+                    <input type="url" class="form-control" v-model="expeditionFormData.expedition_cover_image_url"
+                      placeholder="https://... or upload" />
+                    <label class="btn btn-trek-outline mb-0 d-inline-flex align-items-center justify-content-center" style="cursor:pointer; width:42px; height:38px;">
+                      <i class="bi bi-upload"></i>
+                      <input type="file" accept="image/*" style="display:none;" @change="e => handleCoverImageFileUpload(e, 'create')" />
+                    </label>
+                  </div>
+                  <div v-if="coverImageUploading" style="font-size:0.75rem; color:var(--trek-primary);" class="mt-1">
+                    <span class="spinner-border spinner-border-sm me-1"></span>Uploading...
+                  </div>
                 </div>
                 <div class="col-12">
                   <label class="form-label">Meeting Point Address</label>
@@ -1965,9 +1913,7 @@
           </div>
         </div>
 
-        <!-- ====================================================
-           ADMIN: USER MANAGEMENT
-      ==================================================== -->
+        
         <div v-if="currentView === 'admin-users'" class="animate-in">
           <div class="section-header">
             <h2 class="section-title">User <span>Management</span></h2>
@@ -2116,9 +2062,7 @@
           </div>
         </div>
 
-        <!-- ====================================================
-           ADMIN: ADD STAFF
-      ==================================================== -->
+        
         <div v-if="currentView === 'admin-create-staff'" class="animate-in">
           <div class="section-header">
             <h2 class="section-title">Add Trek <span>Staff</span></h2>
@@ -2163,9 +2107,7 @@
           </div>
         </div>
 
-        <!-- ====================================================
-           ADMIN: ANALYTICS
-      ==================================================== -->
+        
         <div v-if="currentView === 'admin-analytics'" class="animate-in">
           <div class="section-header">
             <h2 class="section-title">Platform <span>Analytics</span></h2>
@@ -2198,9 +2140,7 @@
           </div>
         </div>
 
-        <!-- ====================================================
-           STAFF: DASHBOARD
-      ==================================================== -->
+        
         <div v-if="currentView === 'staff-dashboard'" class="animate-in">
           <div class="dashboard-hero">
             <div class="hero-badge"><i class="bi bi-person-badge me-1"></i>Trek Staff</div>
@@ -2256,9 +2196,7 @@
           </div>
         </div>
 
-        <!-- ====================================================
-           STAFF: ALL ASSIGNED EXPEDITIONS
-      ==================================================== -->
+        
         <div v-if="currentView === 'staff-expeditions'" class="animate-in">
           <div class="section-header">
             <h2 class="section-title">Assigned <span>Expeditions</span></h2>
@@ -2323,9 +2261,7 @@
           </div>
         </div>
 
-        <!-- ====================================================
-           TREKKER: HOME DASHBOARD
-      ==================================================== -->
+        
         <div v-if="currentView === 'trekker-dashboard'" class="animate-in">
           <div class="dashboard-hero">
             <div class="hero-badge"><i class="bi bi-backpack me-1"></i>Trekker</div>
@@ -2394,9 +2330,7 @@
           </div>
         </div>
 
-        <!-- ====================================================
-           TREKKER: EXPLORE OPEN TREKS
-      ==================================================== -->
+        
         <div v-if="currentView === 'trekker-explore'" class="animate-in">
           <div class="section-header">
             <h2 class="section-title">Explore <span>Treks</span></h2>
@@ -2521,9 +2455,7 @@
           </div>
         </div>
 
-        <!-- ====================================================
-           TREKKER: BOOKING HISTORY
-      ==================================================== -->
+        
         <div v-if="currentView === 'bookings'" class="animate-in">
           <div class="section-header">
             <h2 class="section-title">My <span>Bookings</span></h2>
@@ -2588,9 +2520,7 @@
           </div>
         </div>
 
-        <!-- ====================================================
-           PROFILE VIEW (All Roles)
-      ==================================================== -->
+        
         <div v-if="currentView === 'profile'" class="animate-in">
           <div class="section-header">
             <h2 class="section-title">My <span>Profile</span></h2>
@@ -2678,9 +2608,7 @@
       </main>
     </div><!-- /authenticated layout -->
 
-    <!-- ================================================================
-       GLOBAL MODALS
-  ================================================================ -->
+    
 
     <!-- BOOKING MODAL (with payment simulation) -->
     <div class="modal fade" id="bookingModal" tabindex="-1" aria-labelledby="bookingModalLabel" aria-hidden="true">
@@ -2920,8 +2848,18 @@
                   v-model="adminEditingExpedition.expedition_meeting_point_address" />
               </div>
               <div class="col-12">
-                <label class="form-label">Cover Image URL</label>
-                <input type="url" class="form-control" v-model="adminEditingExpedition.expedition_cover_image_url" />
+                <label class="form-label">Cover Image</label>
+                <div class="d-flex gap-2">
+                  <input type="url" class="form-control" v-model="adminEditingExpedition.expedition_cover_image_url"
+                    placeholder="https://... or upload" />
+                  <label class="btn btn-trek-outline mb-0 d-inline-flex align-items-center justify-content-center" style="cursor:pointer; width:42px; height:38px;">
+                    <i class="bi bi-upload"></i>
+                    <input type="file" accept="image/*" style="display:none;" @change="e => handleCoverImageFileUpload(e, 'edit')" />
+                  </label>
+                </div>
+                <div v-if="coverImageUploading" style="font-size:0.75rem; color:var(--trek-primary);" class="mt-1">
+                  <span class="spinner-border spinner-border-sm me-1"></span>Uploading...
+                </div>
               </div>
               <div class="col-12">
                 <label class="form-label">Description</label>
@@ -3059,9 +2997,7 @@
 
   </div><!-- /#trek-app -->
 
-  <!-- ================================================================
-     SCRIPTS
-================================================================ -->
+  
   <!-- Bootstrap 5 JS -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <!-- Vue 3 CDN -->

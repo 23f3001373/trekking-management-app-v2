@@ -1,58 +1,13 @@
-/**
- * app.js — TrekVista SPA Application Logic
- * ==========================================
- * This is the single Vue 3 application script for the Trekking Management
- * Platform V2. It manages:
- *
- *   ARCHITECTURE:
- *   - Uses Vue 3 Options API (maximum clarity for academic review).
- *   - Single flat reactive state object (no Pinia/Vuex — CDN-only constraint).
- *   - JWT stored in memory (access token) + localStorage (refresh token).
- *     This pattern prevents XSS from stealing the short-lived access token
- *     while still supporting tab-persistence for the refresh token.
- *
- *   STATE DOMAINS:
- *   1. Authentication state (session, tokens, views)
- *   2. Navigation state (currentView, sidebarOpen)
- *   3. Admin state (expeditions, users, metrics, forms)
- *   4. Staff state (assigned expeditions, management payloads)
- *   5. Trekker state (open treks, bookings, filters)
- *   6. Global UI state (loading, toasts, modals)
- *
- *   OPTIONAL FEATURES IMPLEMENTED:
- *   - ChartJS analytics dashboard (donut, bar, line charts)
- *   - Payment simulation modal (simulated card payment flow)
- *   - PWA: Service Worker registration is in index.html
- *   - Frontend validation on all form fields (HTML5 + JS reactive)
- *   - Password strength indicator
- *   - Booking confirmation toast notifications
- *   - CSV export with 202 async trigger + polling toast
- *   - Responsive sidebar with mobile overlay
- *   - Debounced search inputs
- *
- *   API COMMUNICATION:
- *   - All API calls go through `this.callTrekPlatformApi(...)`.
- *   - Access token auto-refresh uses the refresh token when a 401 is
- *     received, then retries the original request.
- *   - All error messages from the API are displayed via the toast system.
- */
+
 
 const { createApp } = Vue;
 
-// =============================================================================
-// CONSTANTS
-// =============================================================================
-
-/** Base URL of the Flask API server. Change this for production. */
 const TREK_PLATFORM_API_BASE_URL = 'http://127.0.0.1:5000/api';
 
-/** LocalStorage key for the JWT refresh token (access token stays in memory). */
 const REFRESH_TOKEN_STORAGE_KEY = 'trek_platform_refresh_token_v2';
 
-/** Debounce delay for search inputs (milliseconds). */
 const SEARCH_DEBOUNCE_DELAY_MS = 400;
 
-/** Chart.js color palette matching the forest theme. */
 const CHART_COLOR_PALETTE = {
   green:   'rgba(76, 175, 80, 0.8)',
   sage:    'rgba(129, 199, 132, 0.8)',
@@ -64,34 +19,24 @@ const CHART_COLOR_PALETTE = {
   teal:    'rgba(38, 198, 218, 0.8)',
 };
 
-// =============================================================================
-// VUE 3 APPLICATION
-// =============================================================================
+// call api
 
 createApp({
 
-  // ===========================================================================
-  // DATA — Reactive State
-  // ===========================================================================
   data() {
     return {
-      // ---- Global UI ----
       globalLoadingState: false,
       globalLoadingMessage: '',
 
-      // ---- Auth State ----
-      authenticatedUserSession: null,  // null = not logged in, object = user data
-      inMemoryAccessToken: null,       // Short-lived JWT; never persisted to localStorage
-      activeAuthView: 'login',         // 'login' | 'register'
+      authenticatedUserSession: null,
+      inMemoryAccessToken: null,
+      activeAuthView: 'login',
 
-      // ---- Navigation ----
       currentView: 'admin-dashboard',
       sidebarOpen: false,
 
-      // ---- Toast System ----
       _toastIdCounter: 0,
 
-      // ---- LOGIN FORM ----
       loginFormData: {
         user_email_address: '',
         submitted_password: '',
@@ -101,7 +46,6 @@ createApp({
       loginSubmitting: false,
       loginPasswordVisible: false,
 
-      // ---- REGISTER FORM ----
       registrationFormData: {
         user_full_name: '',
         user_email_address: '',
@@ -114,23 +58,19 @@ createApp({
       registrationEmailChecked: false,
       registerPasswordVisible: false,
 
-      // ---- ADMIN DASHBOARD ----
       adminDashboardMetrics: [],
       adminRecentExpeditions: [],
 
-      // ---- ADMIN EXPEDITIONS ----
       adminAllExpeditions: [],
       adminExpeditionsStatusFilter: '',
       adminExpeditionsPage: 1,
       adminExpeditionsPagination: { current_page: 1, total_pages: 1, total_expedition_count: 0, has_next_page: false, has_previous_page: false },
 
-      // ---- ADMIN USERS ----
       adminAllUsers: [],
       userSearchKeyword: '',
       userRoleFilter: '',
       _userSearchDebounceTimer: null,
 
-      // ---- ADMIN CREATE EXPEDITION FORM ----
       expeditionFormData: {
         expedition_route_name: '',
         expedition_geographical_location: '',
@@ -149,16 +89,14 @@ createApp({
       expeditionFormErrors: {},
       expeditionFormApiError: '',
       expeditionFormSubmitting: false,
+      coverImageUploading: false,
 
-      // ---- ADMIN EDIT EXPEDITION ----
       adminEditingExpedition: null,
       editExpeditionSubmitting: false,
 
-      // ---- ADMIN DELETE EXPEDITION ----
       expeditionToDelete: null,
       deleteSubmitting: false,
 
-      // ---- ADMIN CREATE STAFF ----
       staffFormData: {
         user_full_name: '',
         user_email_address: '',
@@ -170,16 +108,13 @@ createApp({
       staffFormSubmitting: false,
       allStaffAccounts: [],
 
-      // ---- EXPEDITION STATUSES ----
       expeditionStatuses: ['Pending', 'Approved', 'Open', 'Closed', 'Completed', 'Cancelled'],
 
-      // ---- STAFF DASHBOARD ----
       staffDashboardSummary: null,
       staffOpenExpeditions: [],
       staffAllAssignedExpeditions: [],
       staffExpeditionsFilter: '',
 
-      // ---- STAFF MANAGE MODAL ----
       staffManagingExpedition: null,
       staffUpdatePayload: {
         current_expedition_lifecycle_status: null,
@@ -187,7 +122,6 @@ createApp({
       },
       staffUpdateSubmitting: false,
 
-      // ---- TREKKER: EXPLORE ----
       trekkerOpenExpeditions: [],
       expeditionsLoading: false,
       trekFilterParams: {
@@ -199,34 +133,28 @@ createApp({
       openTreksPagination: { current_page: 1, total_pages: 1, total_open_expedition_count: 0, has_next_page: false },
       _trekSearchDebounceTimer: null,
 
-      // ---- TREKKER: BOOKING ----
       trekkerAllBookings: [],
       trekkerUpcomingBookings: [],
       bookingStatusFilter: '',
       trekkerStats: { totalBookings: 0, completedTreks: 0, upcomingTreks: 0, cancelledTreks: 0 },
 
-      // ---- BOOKING MODAL ----
       selectedExpeditionForBooking: null,
       bookingParticipants: 1,
       bookingSpecialNote: '',
-      bookingStep: 1,  // 1=details, 2=payment, 3=processing
+      bookingStep: 1,
       bookingModalInstance: null,
 
-      // ---- CANCEL BOOKING MODAL ----
       selectedBookingForCancellation: null,
       cancellationReason: '',
       cancellationSubmitting: false,
       cancelBookingModalInstance: null,
 
-      // ---- CSV EXPORT ----
       csvExportLoading: false,
 
-      // ---- PARTICIPANTS MODAL ----
       expeditionParticipants: [],
       participantsLoading: false,
       participantsModalInstance: null,
 
-      // ---- PROFILE FORM ----
       profileFormData: {
         user_full_name: '',
         user_contact_phone_number: '',
@@ -239,19 +167,13 @@ createApp({
       passwordChangeErrors: {},
       passwordChangeSubmitting: false,
 
-      // ---- CHART INSTANCES ----
       _chartInstances: {},
     };
   },
 
-  // ===========================================================================
-  // COMPUTED — Derived State
-  // ===========================================================================
+  // update ui state
   computed: {
-    /**
-     * Returns the two-letter initials of the authenticated user.
-     * Used in the avatar circle throughout the UI.
-     */
+    
     userInitials() {
       if (!this.authenticatedUserSession?.user_full_name) return '??';
       const name_parts = this.authenticatedUserSession.user_full_name.trim().split(' ');
@@ -261,10 +183,7 @@ createApp({
       return name_parts[0].slice(0, 2).toUpperCase();
     },
 
-    /**
-     * Computes the password strength for the registration form.
-     * Returns 'weak', 'medium', or 'strong' based on character composition.
-     */
+    
     passwordStrength() {
       const pwd = this.registrationFormData.raw_password;
       if (!pwd) return '';
@@ -291,9 +210,7 @@ createApp({
       return { weak: '⚠ Weak password', medium: '◑ Medium strength', strong: '✓ Strong password' }[this.passwordStrength] || '';
     },
 
-    /**
-     * Derives staff-level dashboard statistics from raw expedition data.
-     */
+    
     staffDashboardStats() {
       if (!this.staffDashboardSummary) return [];
       return [
@@ -305,57 +222,30 @@ createApp({
     },
   },
 
-  // ===========================================================================
-  // LIFECYCLE HOOKS
-  // ===========================================================================
-
-  /**
-   * mounted() — Called after Vue mounts the app.
-   * Attempts to restore an authenticated session from a stored refresh token.
-   * This enables "stay logged in" behaviour without storing access tokens.
-   */
+  
   async mounted() {
-    // Initialise Bootstrap modal instances for global modals.
     this.bookingModalInstance = new bootstrap.Modal(document.getElementById('bookingModal'));
     this.cancelBookingModalInstance = new bootstrap.Modal(document.getElementById('cancelBookingModal'));
     this.participantsModalInstance = new bootstrap.Modal(document.getElementById('participantsModal'));
 
-    // Attempt session restoration from stored refresh token.
     const stored_refresh_token = localStorage.getItem(REFRESH_TOKEN_STORAGE_KEY);
     if (stored_refresh_token) {
       await this.attemptSessionRestoreFromRefreshToken(stored_refresh_token);
     }
+
+    const preloader = document.getElementById('app-preloader');
+    if (preloader) {
+      preloader.style.opacity = '0';
+      setTimeout(() => preloader.remove(), 300);
+    }
   },
 
-  // ===========================================================================
-  // METHODS
-  // ===========================================================================
   methods: {
 
-    // =========================================================================
-    // SECTION 1: API COMMUNICATION LAYER
-    // =========================================================================
-
-    /**
-     * callTrekPlatformApi — Central HTTP client for all API requests.
-     *
-     * WHY centralise here?
-     * - Single point for attaching Authorization headers.
-     * - Single point for auto-refresh of expired access tokens.
-     * - Uniform error handling across all callers.
-     * - Prevents code duplication in every data-fetching method.
-     *
-     * @param {string}  endpoint    - API path (e.g. '/auth/login')
-     * @param {string}  method      - HTTP method (GET, POST, PUT, DELETE, PATCH)
-     * @param {object}  body        - Request body (auto-serialised to JSON)
-     * @param {boolean} skipAuth    - If true, don't attach the Authorization header
-     * @param {boolean} isRetry     - Internal flag; prevents infinite retry loops
-     * @returns {object} { data, status, ok }
-     */
+    
     async callTrekPlatformApi(endpoint, method = 'GET', body = null, skipAuth = false, isRetry = false) {
       const request_headers = { 'Content-Type': 'application/json' };
 
-      // Attach the in-memory access token unless this is an auth endpoint.
       if (!skipAuth && this.inMemoryAccessToken) {
         request_headers['Authorization'] = `Bearer ${this.inMemoryAccessToken}`;
       }
@@ -371,16 +261,13 @@ createApp({
         return { data: null, status: 0, ok: false };
       }
 
-      // Auto-refresh on 401 — only once, to prevent infinite loops.
       if (api_response.status === 401 && !isRetry && !skipAuth) {
         const refresh_token = localStorage.getItem(REFRESH_TOKEN_STORAGE_KEY);
         if (refresh_token) {
           const token_refreshed = await this.performTokenRefresh(refresh_token);
           if (token_refreshed) {
-            // Retry the original request with the new access token.
             return await this.callTrekPlatformApi(endpoint, method, body, skipAuth, true);
           } else {
-            // Refresh failed (likely expired) — force re-login.
             this.forceLogoutAndClearSession();
             return { data: null, status: 401, ok: false };
           }
@@ -391,20 +278,41 @@ createApp({
       try {
         response_data = await api_response.json();
       } catch (_) {
-        // Response had no JSON body (e.g. 204 No Content) — that's fine.
       }
 
       return { data: response_data, status: api_response.status, ok: api_response.ok };
     },
 
-    // =========================================================================
-    // SECTION 2: AUTHENTICATION
-    // =========================================================================
+    async handleCoverImageFileUpload(event, type) {
+      const file = event.target.files[0];
+      if (!file) return;
 
-    /**
-     * validateLoginForm — Client-side validation before the login API call.
-     * Returns true if valid, populates `loginFormErrors` if not.
-     */
+      if (file.size > 5 * 1024 * 1024) {
+        this.showToast('error', 'File Too Large', 'Cover images must be smaller than 5MB.');
+        return;
+      }
+
+      this.coverImageUploading = true;
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64Url = reader.result;
+        if (type === 'create') {
+          this.expeditionFormData.expedition_cover_image_url = base64Url;
+        } else if (type === 'edit' && this.adminEditingExpedition) {
+          this.adminEditingExpedition.expedition_cover_image_url = base64Url;
+        }
+        this.coverImageUploading = false;
+        this.showToast('success', 'Upload Complete', 'Cover image updated successfully!');
+      };
+      reader.onerror = () => {
+        this.coverImageUploading = false;
+        this.showToast('error', 'Upload Failed', 'Failed to read cover image file.');
+      };
+      reader.readAsDataURL(file);
+    },
+
+    
     validateLoginForm() {
       this.loginFormErrors = {};
       if (!this.loginFormData.user_email_address.trim()) {
@@ -418,11 +326,7 @@ createApp({
       return Object.keys(this.loginFormErrors).length === 0;
     },
 
-    /**
-     * handleUserLoginSubmission — Submits the login form.
-     * On success: stores tokens, loads user data, navigates to dashboard.
-     * On failure: displays API error message inline.
-     */
+    
     async handleUserLoginSubmission() {
       if (!this.validateLoginForm()) return;
       this.loginSubmitting = true;
@@ -450,10 +354,7 @@ createApp({
       }
     },
 
-    /**
-     * validateRegistrationForm — Comprehensive client-side validation for trekker registration.
-     * Validates name, email format, phone number format, and password strength.
-     */
+    
     validateRegistrationForm() {
       this.registrationFormErrors = {};
       const reg = this.registrationFormData;
@@ -483,10 +384,7 @@ createApp({
       return Object.keys(this.registrationFormErrors).length === 0;
     },
 
-    /**
-     * handleTrekkerRegistrationSubmission — Submits the registration form.
-     * On success, auto-logs the user in.
-     */
+    
     async handleTrekkerRegistrationSubmission() {
       if (!this.validateRegistrationForm()) return;
       this.registrationSubmitting = true;
@@ -496,7 +394,6 @@ createApp({
       this.registrationSubmitting = false;
 
       if (ok && data) {
-        // Auto-login after successful registration.
         this.loginFormData.user_email_address = this.registrationFormData.user_email_address;
         this.loginFormData.submitted_password = this.registrationFormData.raw_password;
         this.registrationFormData = { user_full_name: '', user_email_address: '', user_contact_phone_number: '', raw_password: '' };
@@ -507,10 +404,7 @@ createApp({
       }
     },
 
-    /**
-     * performTokenRefresh — Exchanges a refresh token for a new access token.
-     * Called automatically by callTrekPlatformApi when a 401 is received.
-     */
+    
     async performTokenRefresh(stored_refresh_token) {
       const old_access_token = this.inMemoryAccessToken;
       this.inMemoryAccessToken = stored_refresh_token;
@@ -523,23 +417,18 @@ createApp({
       return false;
     },
 
-    /**
-     * attemptSessionRestoreFromRefreshToken — On app load, if a refresh token
-     * is found in localStorage, silently attempt to get a new access token and
-     * restore the user session without requiring a new login.
-     */
+    
     async attemptSessionRestoreFromRefreshToken(refresh_token) {
       this.globalLoadingState = true;
       this.globalLoadingMessage = 'Restoring session...';
 
-      // Temporarily set the refresh token so the API call can use it.
+      // handle error
       this.inMemoryAccessToken = refresh_token;
 
       const { data, ok } = await this.callTrekPlatformApi('/auth/refresh-token', 'POST', {}, false);
 
       if (ok && data?.new_access_token) {
         this.inMemoryAccessToken = data.new_access_token;
-        // Now fetch the current user profile.
         const profile_response = await this.callTrekPlatformApi('/auth/me', 'GET');
         if (profile_response.ok && profile_response.data?.current_user_profile) {
           this.authenticatedUserSession = profile_response.data.current_user_profile;
@@ -557,14 +446,14 @@ createApp({
       this.globalLoadingState = false;
     },
 
-    /** handleLogout — Clears all session data and returns to login. */
+    
     async handleLogout() {
       await this.callTrekPlatformApi('/auth/logout', 'DELETE');
       this.forceLogoutAndClearSession();
       this.showToast('info', 'Logged out', 'See you on the trails! 🏔️');
     },
 
-    /** forceLogoutAndClearSession — Clears tokens and resets auth state. */
+    
     forceLogoutAndClearSession() {
       this.inMemoryAccessToken = null;
       this.authenticatedUserSession = null;
@@ -573,21 +462,14 @@ createApp({
       this.destroyAllChartInstances();
     },
 
-    // =========================================================================
-    // SECTION 3: NAVIGATION
-    // =========================================================================
-
-    /**
-     * navigateTo — Changes the active view and triggers data loading for that view.
-     * Also closes the mobile sidebar automatically after navigation.
-     */
+    
     async navigateTo(target_view) {
       this.currentView = target_view;
       this.sidebarOpen = false;
       await this.loadDataForView(target_view);
     },
 
-    /** navigateToDefaultViewForRole — Sets the initial view based on user role. */
+    
     navigateToDefaultViewForRole(role) {
       const role_default_views = {
         Admin: 'admin-dashboard',
@@ -597,15 +479,12 @@ createApp({
       this.currentView = role_default_views[role] || 'login';
     },
 
-    /** toggleSidebar — Opens/closes the mobile sidebar. */
+    
     toggleSidebar() {
       this.sidebarOpen = !this.sidebarOpen;
     },
 
-    /**
-     * loadDataForView — Triggers the appropriate data loading method when
-     * navigating to a view that requires fetched data.
-     */
+    
     async loadDataForView(view) {
       const view_loaders = {
         'admin-dashboard':         this.loadAdminDashboard,
@@ -624,17 +503,13 @@ createApp({
       if (view_loaders[view]) await view_loaders[view]();
     },
 
-    /** loadInitialDataForRole — Loads data appropriate for the user's role on login. */
+    
     async loadInitialDataForRole() {
       if (!this.authenticatedUserSession) return;
       await this.loadDataForView(this.currentView);
     },
 
-    // =========================================================================
-    // SECTION 4: ADMIN — DATA LOADING
-    // =========================================================================
-
-    /** loadAdminDashboard — Fetches dashboard metric cards and recent expeditions. */
+    
     async loadAdminDashboard() {
       const { data, ok } = await this.callTrekPlatformApi('/admin/dashboard/metrics');
       if (ok && data) {
@@ -651,18 +526,16 @@ createApp({
           { key: 'bookings', label: 'Total Bookings',  value: totalBookings, icon: 'bi bi-calendar-check-fill', iconBg: 'metric-icon-red' },
         ];
 
-        // Render donut and bar charts on the next tick after DOM updates.
         this.$nextTick(() => this.renderAdminDashboardCharts(metrics));
       }
 
-      // Load recent 5 expeditions for the mini-table.
       const exp_response = await this.callTrekPlatformApi('/admin/expeditions?page=1&per_page=5');
       if (exp_response.ok && exp_response.data) {
         this.adminRecentExpeditions = exp_response.data.expeditions || exp_response.data.expedition_list || [];
       }
     },
 
-    /** loadAdminExpeditions — Paginated expedition list for admin. */
+    
     async loadAdminExpeditions() {
       const params = new URLSearchParams({
         page: this.adminExpeditionsPage,
@@ -677,7 +550,7 @@ createApp({
       }
     },
 
-    /** loadAdminUsers — Loads all user accounts for admin management view. */
+    
     async loadAdminUsers() {
       const params = new URLSearchParams();
       if (this.userSearchKeyword.trim()) params.append('search_keyword', this.userSearchKeyword);
@@ -687,26 +560,19 @@ createApp({
       if (ok && data) this.adminAllUsers = data.platform_users || data.user_accounts_list || [];
     },
 
-    /** loadAllStaffForDropdown — Fetches staff list for expedition assignment dropdowns. */
+    
     async loadAllStaffForDropdown() {
       const { data, ok } = await this.callTrekPlatformApi('/admin/users?role_filter=Staff&per_page=100');
       if (ok && data) this.allStaffAccounts = data.platform_users || data.user_accounts_list || [];
     },
 
-    /** debouncedUserSearch — Debounces the user search input to avoid excessive API calls. */
+    
     debouncedUserSearch() {
       clearTimeout(this._userSearchDebounceTimer);
       this._userSearchDebounceTimer = setTimeout(() => this.loadAdminUsers(), SEARCH_DEBOUNCE_DELAY_MS);
     },
 
-    // =========================================================================
-    // SECTION 5: ADMIN — ACTIONS
-    // =========================================================================
-
-    /**
-     * validateExpeditionForm — Frontend validation for expedition create/edit.
-     * Checks required fields and logical date ordering.
-     */
+    
     validateExpeditionForm(form_data) {
       const errors = {};
       if (!form_data.expedition_route_name?.trim()) {
@@ -732,7 +598,7 @@ createApp({
       return errors;
     },
 
-    /** handleCreateExpeditionSubmission — Posts new expedition to the API. */
+    
     async handleCreateExpeditionSubmission() {
       this.expeditionFormErrors = this.validateExpeditionForm(this.expeditionFormData);
       if (Object.keys(this.expeditionFormErrors).length > 0) return;
@@ -762,7 +628,7 @@ createApp({
       }
     },
 
-    /** resetExpeditionForm — Resets the create expedition form to defaults. */
+    
     resetExpeditionForm() {
       this.expeditionFormData = {
         expedition_route_name: '', expedition_geographical_location: '',
@@ -777,16 +643,15 @@ createApp({
       this.expeditionFormApiError = '';
     },
 
-    /** openAdminEditExpeditionModal — Opens the edit modal, pre-populating fields. */
+    
     openAdminEditExpeditionModal(expedition) {
-      // Deep clone to avoid mutating the list before save.
       this.adminEditingExpedition = JSON.parse(JSON.stringify(expedition));
-      // Pre-load staff if not already loaded.
+      // redirct to page
       if (this.allStaffAccounts.length === 0) this.loadAllStaffForDropdown();
       new bootstrap.Modal(document.getElementById('adminEditExpeditionModal')).show();
     },
 
-    /** handleUpdateExpedition — PUTs updated expedition data to the API. */
+    
     async handleUpdateExpedition() {
       if (!this.adminEditingExpedition) return;
       this.editExpeditionSubmitting = true;
@@ -817,13 +682,13 @@ createApp({
       }
     },
 
-    /** confirmDeleteExpedition — Sets the target expedition and shows confirm modal. */
+    
     confirmDeleteExpedition(expedition) {
       this.expeditionToDelete = expedition;
       new bootstrap.Modal(document.getElementById('deleteConfirmModal')).show();
     },
 
-    /** handleDeleteExpedition — Sends DELETE request to remove an expedition. */
+    
     async handleDeleteExpedition() {
       if (!this.expeditionToDelete) return;
       this.deleteSubmitting = true;
@@ -843,7 +708,7 @@ createApp({
       }
     },
 
-    /** handleCreateStaffSubmission — Creates a new Staff account via admin API. */
+    
     async handleCreateStaffSubmission() {
       this.staffFormErrors = {};
       if (!this.staffFormData.user_full_name.trim()) this.staffFormErrors.user_full_name = 'Name is required.';
@@ -868,7 +733,7 @@ createApp({
       }
     },
 
-    /** toggleUserBlacklist — Toggles the blacklist status of a user account. */
+    
     async toggleUserBlacklist(user) {
       const { ok } = await this.callTrekPlatformApi(`/admin/users/${user.user_account_id}/blacklist`, 'PATCH');
       if (ok) {
@@ -878,7 +743,7 @@ createApp({
       }
     },
 
-    /** deleteUserAccount — Permanently deletes a user account (Trekker or Staff) */
+    
     async deleteUserAccount(user) {
       if (!confirm(`Are you sure you want to permanently delete user "${user.user_full_name}" (${user.user_email_address})? All bookings (if Trekker) will be deleted.`)) {
         return;
@@ -892,18 +757,13 @@ createApp({
       }
     },
 
-    /** viewExpeditionParticipants — Opens participant roster for admin use. */
+    
     async viewExpeditionParticipants(expedition) {
       this.openStaffParticipantsModal(expedition);
     },
 
-    // =========================================================================
-    // SECTION 6: ADMIN — ANALYTICS CHARTS
-    // =========================================================================
-
-    /** renderAdminDashboardCharts — Draws difficulty donut and booking status doughnut. */
+    
     renderAdminDashboardCharts(metrics_data) {
-      // Chart 1: Expeditions by Difficulty (Bar)
       this.destroyChart('admin-difficulty-chart');
       const difficulty_canvas = document.getElementById('admin-difficulty-chart');
       if (difficulty_canvas && metrics_data.difficulty_distribution) {
@@ -924,7 +784,6 @@ createApp({
         });
       }
 
-      // Chart 2: Booking Status Distribution (Doughnut)
       this.destroyChart('admin-booking-chart');
       const booking_canvas = document.getElementById('admin-booking-chart');
       if (booking_canvas && metrics_data.booking_status_distribution) {
@@ -944,14 +803,13 @@ createApp({
       }
     },
 
-    /** loadAdminAnalyticsCharts — Fetches analytics data and renders all analytics charts. */
+    
     async loadAdminAnalyticsCharts() {
       const { data, ok } = await this.callTrekPlatformApi('/admin/dashboard/metrics');
       if (!ok || !data) return;
 
       await this.$nextTick();
 
-      // Popular treks bar chart
       this.destroyChart('popular-treks-chart');
       const popular_canvas = document.getElementById('popular-treks-chart');
       if (popular_canvas && data.most_popular_expeditions?.length > 0) {
@@ -975,7 +833,6 @@ createApp({
         });
       }
 
-      // User participation by difficulty (donut)
       this.destroyChart('difficulty-participation-chart');
       const diff_canvas = document.getElementById('difficulty-participation-chart');
       if (diff_canvas && data.difficulty_distribution) {
@@ -993,7 +850,6 @@ createApp({
         });
       }
 
-      // Bookings over time line chart (simulated if not from API)
       this.destroyChart('bookings-timeline-chart');
       const timeline_canvas = document.getElementById('bookings-timeline-chart');
       if (timeline_canvas) {
@@ -1019,10 +875,7 @@ createApp({
       }
     },
 
-    /**
-     * getChartBaseOptions — Returns Chart.js config options matching the dark forest theme.
-     * Centralised here so all charts have consistent styling with minimal duplication.
-     */
+    
     getChartBaseOptions(chart_type) {
       const base = {
         responsive: true,
@@ -1064,7 +917,7 @@ createApp({
       return base;
     },
 
-    /** getLastSixMonthLabels — Generates abbreviated month names for timeline charts. */
+    
     getLastSixMonthLabels() {
       const months = [];
       const now = new Date();
@@ -1075,7 +928,7 @@ createApp({
       return months;
     },
 
-    /** destroyChart — Destroys a Chart.js instance to prevent canvas reuse errors. */
+    
     destroyChart(canvas_id) {
       if (this._chartInstances[canvas_id]) {
         this._chartInstances[canvas_id].destroy();
@@ -1083,16 +936,12 @@ createApp({
       }
     },
 
-    /** destroyAllChartInstances — Called on logout to clean up all chart instances. */
+    
     destroyAllChartInstances() {
       Object.keys(this._chartInstances).forEach(id => this.destroyChart(id));
     },
 
-    // =========================================================================
-    // SECTION 7: STAFF — DATA & ACTIONS
-    // =========================================================================
-
-    /** loadStaffDashboard — Loads summary metrics and open treks for staff. */
+    
     async loadStaffDashboard() {
       const { data, ok } = await this.callTrekPlatformApi('/staff/dashboard/summary');
       if (ok && data) {
@@ -1123,7 +972,7 @@ createApp({
       }
     },
 
-    /** loadStaffAssignedExpeditions — Full list view of staff's assigned expeditions. */
+    
     async loadStaffAssignedExpeditions() {
       const params = new URLSearchParams();
       if (this.staffExpeditionsFilter) params.append('status_filter', this.staffExpeditionsFilter);
@@ -1133,7 +982,7 @@ createApp({
       }
     },
 
-    /** openStaffExpeditionManageModal — Opens the staff manage modal for an expedition. */
+    
     openStaffExpeditionManageModal(expedition) {
       this.staffManagingExpedition = expedition;
       this.staffUpdatePayload = {
@@ -1143,12 +992,11 @@ createApp({
       new bootstrap.Modal(document.getElementById('staffManageModal')).show();
     },
 
-    /** handleStaffExpeditionUpdate — PATCH to update status/slots for a staff-managed expedition. */
+    
     async handleStaffExpeditionUpdate() {
       if (!this.staffManagingExpedition) return;
       this.staffUpdateSubmitting = true;
 
-      // Only send fields that were actually changed.
       const update_payload = {};
       if (this.staffUpdatePayload.current_expedition_lifecycle_status) {
         update_payload.current_expedition_lifecycle_status = this.staffUpdatePayload.current_expedition_lifecycle_status;
@@ -1171,7 +1019,7 @@ createApp({
       }
     },
 
-    /** openStaffParticipantsModal — Opens participant roster for a given expedition. */
+    
     async openStaffParticipantsModal(expedition) {
       this.expeditionParticipants = [];
       this.participantsLoading = true;
@@ -1184,15 +1032,10 @@ createApp({
       if (ok && data) this.expeditionParticipants = data.participant_booking_records_list || [];
     },
 
-    // =========================================================================
-    // SECTION 8: TREKKER — DATA & BOOKING ACTIONS
-    // =========================================================================
-
-    /** loadTrekkerDashboard — Loads booking stats and upcoming treks for trekker home. */
+    
     async loadTrekkerDashboard() {
       await Promise.all([this.loadTrekkerBookings(), this.loadOpenExpeditions(1)]);
 
-      // Compute stats from booking data.
       this.trekkerStats = {
         totalBookings: this.trekkerAllBookings.length,
         completedTreks: this.trekkerAllBookings.filter(b => b.current_booking_lifecycle_status === 'Completed').length,
@@ -1200,14 +1043,13 @@ createApp({
         cancelledTreks: this.trekkerAllBookings.filter(b => b.current_booking_lifecycle_status === 'Cancelled').length,
       };
 
-      // Upcoming = booked, sorted by start date.
       this.trekkerUpcomingBookings = this.trekkerAllBookings
         .filter(b => b.current_booking_lifecycle_status === 'Booked')
         .sort((a, b) => new Date(a.expedition_scheduled_start_date) - new Date(b.expedition_scheduled_start_date))
         .slice(0, 3);
     },
 
-    /** loadOpenExpeditions — Fetches paginated open expeditions with active filters. */
+    
     async loadOpenExpeditions(page = 1) {
       this.expeditionsLoading = true;
       const params = new URLSearchParams({ page, per_page: 12 });
@@ -1224,19 +1066,19 @@ createApp({
       }
     },
 
-    /** debouncedTrekSearch — Debounces location text search in the explore filter bar. */
+    
     debouncedTrekSearch() {
       clearTimeout(this._trekSearchDebounceTimer);
       this._trekSearchDebounceTimer = setTimeout(() => this.loadOpenExpeditions(1), SEARCH_DEBOUNCE_DELAY_MS);
     },
 
-    /** clearTrekFilters — Resets all expedition filters and reloads. */
+    
     clearTrekFilters() {
       this.trekFilterParams = { difficulty_level_filter: '', geographical_location_keyword: '', maximum_price_inr: null, maximum_duration_days: null };
       this.loadOpenExpeditions(1);
     },
 
-    /** loadTrekkerBookings — Fetches the authenticated trekker's booking history. */
+    
     async loadTrekkerBookings() {
       const params = new URLSearchParams();
       if (this.bookingStatusFilter) params.append('status_filter', this.bookingStatusFilter);
@@ -1246,7 +1088,7 @@ createApp({
       }
     },
 
-    /** openBookingModal — Prepares and opens the booking confirmation modal. */
+    
     openBookingModal(expedition) {
       this.selectedExpeditionForBooking = expedition;
       this.bookingParticipants = 1;
@@ -1255,13 +1097,10 @@ createApp({
       this.bookingModalInstance.show();
     },
 
-    /**
-     * handleConfirmBooking — Submits the booking request.
-     * Shows a payment processing animation if payment simulation is active.
-     */
+    
     async handleConfirmBooking() {
       if (!this.selectedExpeditionForBooking) return;
-      this.bookingStep = 3;  // Show processing animation.
+      this.bookingStep = 3;
 
       const { data, ok } = await this.callTrekPlatformApi(
         '/trekker/bookings',
@@ -1282,23 +1121,22 @@ createApp({
           `Your trek is booked! Ref: ${data.booking_confirmation_reference_code}`,
           6000
         );
-        // Refresh surrounding data.
         await this.loadOpenExpeditions(this.openTreksPagination.current_page);
         await this.loadTrekkerBookings();
       } else {
-        this.bookingStep = 2; // Reset to payment step on failure.
+        this.bookingStep = 2;
         this.showToast('error', 'Booking Failed', data?.message || 'Could not complete booking.');
       }
     },
 
-    /** openCancelBookingModal — Opens the cancel confirmation modal. */
+    
     openCancelBookingModal(booking) {
       this.selectedBookingForCancellation = booking;
       this.cancellationReason = '';
       this.cancelBookingModalInstance.show();
     },
 
-    /** handleConfirmCancellation — Sends a cancellation request to the API. */
+    
     async handleConfirmCancellation() {
       if (!this.selectedBookingForCancellation) return;
       this.cancellationSubmitting = true;
@@ -1320,11 +1158,7 @@ createApp({
       }
     },
 
-    /**
-     * triggerBookingCsvExport — Triggers the async CSV export task.
-     * The server returns 202 Accepted immediately; the trekker receives the
-     * CSV by email when Celery completes the task. A toast informs them.
-     */
+    
     async triggerBookingCsvExport() {
       this.csvExportLoading = true;
       const { data, ok } = await this.callTrekPlatformApi('/trekker/bookings/export-csv', 'POST');
@@ -1342,11 +1176,7 @@ createApp({
       }
     },
 
-    // =========================================================================
-    // SECTION 9: PROFILE
-    // =========================================================================
-
-    /** loadProfileData — Populates the profile form with current user data. */
+    
     async loadProfileData() {
       this.profileFormData = {
         user_full_name: this.authenticatedUserSession.user_full_name || '',
@@ -1357,14 +1187,13 @@ createApp({
       };
     },
 
-    /** handleProfileUpdate — PATCHes profile updates to the API. */
+    
     async handleProfileUpdate() {
       this.profileUpdateSubmitting = true;
       const { data, ok } = await this.callTrekPlatformApi('/auth/update-profile', 'PATCH', this.profileFormData);
       this.profileUpdateSubmitting = false;
 
       if (ok) {
-        // Update the in-memory session with new data.
         this.authenticatedUserSession = { ...this.authenticatedUserSession, ...this.profileFormData };
         this.showToast('success', 'Profile Updated', 'Your profile has been saved.');
       } else {
@@ -1372,7 +1201,7 @@ createApp({
       }
     },
 
-    /** handlePasswordChange — Validates and submits a password change request. */
+    
     async handlePasswordChange() {
       this.passwordChangeErrors = {};
       if (!this.passwordChangeData.current_password) {
@@ -1395,23 +1224,7 @@ createApp({
       }
     },
 
-    // =========================================================================
-    // SECTION 10: TOAST NOTIFICATION SYSTEM
-    // =========================================================================
-
-    /**
-     * showToast — Displays a notification toast overlay.
-     *
-     * WHY a custom system instead of Bootstrap toasts?
-     * Bootstrap toasts are DOM-centric; injecting them dynamically from Vue
-     * is awkward. This custom system integrates naturally with Vue's reactivity
-     * and allows stacking, auto-dismiss, and manual close.
-     *
-     * @param {string} type      - 'success' | 'error' | 'warning' | 'info'
-     * @param {string} title     - Toast heading text
-     * @param {string} message   - Toast body text
-     * @param {number} duration  - Auto-dismiss delay in ms (default 4000)
-     */
+    
     showToast(type, title, message, duration = 4000) {
       const toast_id = `toast-${++this._toastIdCounter}`;
       const icon_map = {
@@ -1445,21 +1258,13 @@ createApp({
       `;
       toast_container.appendChild(toast_el);
 
-      // Auto-remove after duration.
       setTimeout(() => {
         toast_el.classList.add('toast-exit');
         setTimeout(() => toast_el.remove(), 300);
       }, duration);
     },
 
-    // =========================================================================
-    // SECTION 11: UTILITY HELPERS
-    // =========================================================================
-
-    /**
-     * formatDate — Formats an ISO date string to a human-readable format.
-     * Returns 'N/A' for falsy values to avoid crashes from null API fields.
-     */
+    
     formatDate(iso_date_string) {
       if (!iso_date_string) return 'N/A';
       try {
@@ -1468,17 +1273,13 @@ createApp({
       } catch (_) { return iso_date_string; }
     },
 
-    /**
-     * difficultyBadgeClass — Returns the CSS badge class for a difficulty level.
-     */
+    
     difficultyBadgeClass(difficulty) {
       const class_map = { Easy: 'badge-easy', Moderate: 'badge-moderate', Hard: 'badge-hard' };
       return class_map[difficulty] || 'badge-easy';
     },
 
-    /**
-     * statusBadgeClass — Returns the CSS badge class for expedition status.
-     */
+    
     statusBadgeClass(status) {
       const class_map = {
         Open: 'badge-open', Closed: 'badge-closed', Pending: 'badge-pending',
@@ -1487,16 +1288,13 @@ createApp({
       return class_map[status] || 'badge-pending';
     },
 
-    /** bookingBadgeClass — Returns CSS badge class for booking status. */
+    
     bookingBadgeClass(status) {
       const class_map = { Booked: 'badge-booked', Completed: 'badge-completed', Cancelled: 'badge-cancelled' };
       return class_map[status] || 'badge-booked';
     },
 
-    /**
-     * slotFillPercent — Computes the slot occupancy percentage for the slot bar.
-     * Used to render a visual progress bar on trek cards.
-     */
+    
     slotFillPercent(expedition) {
       const total = expedition.total_participant_slots_capacity;
       const remaining = expedition.available_participant_slots_remaining;
