@@ -199,7 +199,7 @@ class ExpeditionCreateRequestSchema(Schema):
         required=True,
         validate=validate.Range(min=1, max=500, error="Slots must be between 1 and 500."),
     )
-    expedition_cover_image_url = fields.Url(
+    expedition_cover_image_url = fields.Str(
         required=False,
         allow_none=True,
         load_default=None,
@@ -261,7 +261,7 @@ class ExpeditionUpdateRequestSchema(Schema):
         validate=validate.Range(min=1, max=500),
         load_default=None,
     )
-    expedition_cover_image_url = fields.Url(allow_none=True, load_default=None)
+    expedition_cover_image_url = fields.Str(allow_none=True, load_default=None)
     expedition_meeting_point_address = fields.Str(
         allow_none=True,
         load_default=None,

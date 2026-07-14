@@ -400,7 +400,15 @@ createApp({
         this.showToast('success', 'Account Created!', 'Welcome to TrekVista. Logging you in...');
         await this.handleUserLoginSubmission();
       } else {
-        this.registrationApiError = data?.error_detail?.message || data?.message || 'Registration failed. Please try again.';
+        if (data && data.validation_errors) {
+          const errorsList = [];
+          for (const key in data.validation_errors) {
+            errorsList.push(data.validation_errors[key].join(', '));
+          }
+          this.registrationApiError = errorsList.join('; ');
+        } else {
+          this.registrationApiError = data?.error || data?.error_detail?.message || data?.message || 'Registration failed. Please try again.';
+        }
       }
     },
 
@@ -729,7 +737,15 @@ createApp({
         this.staffFormData = { user_full_name: '', user_email_address: '', user_contact_phone_number: '', raw_password: '' };
         this.navigateTo('admin-users');
       } else {
-        this.staffFormApiError = data?.message || 'Failed to create staff account.';
+        if (data && data.validation_errors) {
+          const errorsList = [];
+          for (const key in data.validation_errors) {
+            errorsList.push(data.validation_errors[key].join(', '));
+          }
+          this.staffFormApiError = errorsList.join('; ');
+        } else {
+          this.staffFormApiError = data?.error || data?.message || 'Failed to create staff account.';
+        }
       }
     },
 
