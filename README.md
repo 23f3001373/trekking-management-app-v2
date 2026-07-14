@@ -78,6 +78,11 @@ trekking-app-v2/
 │   ├── index.html               # Main HTML entry file for the Vue.js app
 │   ├── app.js                   # Main JavaScript file containing Vue logic and API calls
 │   ├── index.css                # Styling stylesheet (Bootstrap customizations and glassmorphism)
+│   ├── components/              # Vue.js dynamic dashboard components
+│   │   ├── admin-dashboard.js   # Admin metrics graphs and user controls
+│   │   ├── auth-view.js         # User registration and sign-in view
+│   │   ├── staff-dashboard.js   # Staff guide logs and participant lists
+│   │   └── trekker-dashboard.js # Trekker booking actions and history
 │   ├── manifest.json            # PWA manifest configuration
 │   ├── sw.js                    # Service worker for offline caching and fallbacks
 │   ├── offline.html             # Offline fallback page
